@@ -1,84 +1,87 @@
-# Sprint 002 — Identidade, tenant e persistência
+# Sprint 002 — Incidentes & Timeline
 
 **Status:** Planejamento futuro  
-**Período:** a definir no Sprint Planning  
-**Sprint Goal proposto:** estabelecer persistência, identidade e isolamento multi-tenant como base segura para a primeira funcionalidade de incidente.
+**Duração planejada:** 2 semanas  
+**Release alvo:** `v0.2.0-alpha`  
+**Sprint Goal:** completar o ciclo operacional ALERTA → ATUALIZAÇÃO → NORMALIZAÇÃO com timeline rastreável.
 
-> Este documento contém backlog candidato e não representa compromisso antecipado. O conteúdo deve ser refinado após os resultados da Sprint 001.
+## User Stories
 
-## Backlog candidato
+### US-004 — Atualizar incidente [P0]
+Como operador NOC, quero registrar atualizações em um incidente ativo para manter a operação informada sobre sua evolução.
 
-### P1-003 — Migrations
-- implementar schema inicial;
-- permitir reconstrução do banco a partir de migrations;
-- documentar estratégia de rollback/downgrade.
+**Responsável primário:** 05 Backend & API  
+**Dependências:** UX, domínio Incident, timeline, FE.
 
-### P1-004 — Identidade
-- mapear identidade autenticada para usuário interno;
-- impedir confiança em campos de identidade enviados pelo frontend;
-- definir comportamento de autenticação para ambiente de desenvolvimento/demo conforme arquitetura aprovada.
+**Aceite:** atualização persistida; autor/data-hora registrados; incidente inexistente ou normalizado tratado; API documentada; UI atualizada sem perder contexto.
 
-### P1-005 — Tenant e membership
-- modelar associação usuário/tenant;
-- disponibilizar listagem apenas de tenants autorizados;
-- propagar tenant context de forma segura;
-- criar testes de isolamento cross-tenant.
+### US-005 — Normalizar incidente [P0]
+Como operador NOC, quero normalizar um incidente quando o serviço for restabelecido para registrar corretamente seu encerramento operacional.
 
-### Preparação para P1-006 / P1-007
-- validar contratos necessários para site, severidade e incidente;
-- revisar dependências de dados e UX;
-- garantir que histórias atendam à Definition of Ready antes de ingressarem em Sprint.
+**Responsável primário:** 05 Backend & API
 
-## Dependências
+**Aceite:** transição válida; data/hora e autor; evento na timeline; dupla normalização impedida; confirmação UX para ação crítica.
 
-- Sprint 001 concluída ou base executável equivalente disponível;
-- ORM/migration stack definida;
-- estratégia de IDs aprovada;
-- estratégia de autenticação/OIDC registrada;
-- modelo de dados revisado por Database & Data Model;
-- regras de autorização revisadas por Security/AppSec.
+### US-006 — Visualizar timeline [P0]
+Como operador NOC, quero visualizar a sequência cronológica de eventos para entender rapidamente o histórico do incidente.
 
-## Critérios de sucesso da Sprint
+**Responsável primário:** 04 Frontend
 
-- banco é recriável por migrations;
-- identidade do usuário é determinada de forma confiável pelo backend;
-- usuário acessa somente tenants autorizados;
-- teste automatizado comprova ausência de vazamento cross-tenant no escopo implementado;
-- erros relevantes possuem resposta e logging adequados;
-- pipeline permanece verde;
-- documentação técnica e OpenAPI são atualizadas conforme mudanças.
+**Aceite:** eventos ordenados; tipo/autor/data-hora; carregamento/erro/vazio; timeline append-only no backend.
 
-## Riscos / impedimentos iniciais
+### US-007 — Filtrar e ordenar incidentes [P1]
+Como operador NOC, quero filtrar e ordenar incidentes para priorizar rapidamente os casos relevantes.
 
-| Item | Impacto | Tratamento |
-|---|---|---|
-| Autorização baseada apenas no frontend | Crítico | autorização obrigatória no backend e testes negativos |
-| Tenant scoping inconsistente | Crítico | contexto centralizado + testes cross-tenant |
-| Migration sem rollback documentado | Médio | revisão de Database/Backend antes de Done |
-| Dependência prematura de provedor de identidade cloud | Médio | abstração e modo local conforme ADR |
+**Responsável primário:** 04 Frontend
 
-## Evidências da Sprint
+**Aceite:** filtros por status/severidade/período; paginação; ordenação; parâmetros validados na API.
 
-A preencher durante a Sprint:
+## Distribuição por especialistas
 
-- Pull Requests:
-- migrations:
-- testes unitários:
-- testes de integração:
-- testes cross-tenant:
-- security review:
-- documentação atualizada:
+- **01 PO:** regras de transição, normalização e estados permitidos.
+- **02 Architecture:** domínio de timeline/eventos e contratos.
+- **03 UX/UI:** timeline, confirmações, severidade e feedback.
+- **04 Frontend:** telas de atualização/normalização/timeline/filtros.
+- **05 Backend:** endpoints, regras e services.
+- **06 Database:** IncidentEvent/timeline, índices e constraints.
+- **07 QA:** happy path e negativos de transição.
+- **08 DevOps:** manter CI e ambiente reproduzível.
+- **09 Security:** autorização por ação e proteção contra mass assignment/IDOR.
+- **10 Docs:** OpenAPI, docs de domínio e Sprint.
+- **11 Review:** review independente.
+- **12 Release:** homologação `v0.2.0-alpha`.
 
-## Sprint Review
+## Tasks principais
 
-A preencher ao final:
+- TASK-PO-S2-01 fechar state machine do incidente;
+- TASK-ARC-S2-01 contrato IncidentEvent;
+- TASK-UX-S2-01 fluxo atualização/normalização/timeline;
+- TASK-DB-S2-01 tabela/event store append-only equivalente;
+- TASK-BE-S2-01 POST updates;
+- TASK-BE-S2-02 POST normalize;
+- TASK-BE-S2-03 GET timeline;
+- TASK-BE-S2-04 filtros/paginação/ordenação;
+- TASK-FE-S2-01 atualização;
+- TASK-FE-S2-02 normalização;
+- TASK-FE-S2-03 timeline;
+- TASK-FE-S2-04 filtros/paginação;
+- TASK-QA-S2-01 fluxo criar→atualizar→normalizar;
+- TASK-QA-S2-02 atualizar normalizado/normalizar duas vezes/404/payload inválido;
+- TASK-SEC-S2-01 revisão de autorização e IDOR;
+- TASK-DOC-S2-01 documentação;
+- TASK-CR-S2-01 review;
+- TASK-REL-S2-01 homologação.
 
-- itens concluídos:
-- itens não concluídos:
-- demonstração realizada:
-- feedback dos stakeholders:
-- alterações propostas ao Product Backlog:
+## Dependências críticas
 
-## Retrospective
+Sprint 1 homologada; state machine aprovada pelo PO; modelo de eventos aprovado por Architecture/Database.
 
-Registrar conclusões consolidadas em [RETROSPECTIVES.md](RETROSPECTIVES.md).
+## Critérios de sucesso
+
+- ciclo completo executável pela UI;
+- timeline consistente e append-only;
+- transições inválidas bloqueadas;
+- filtros/paginação funcionais;
+- testes/regressão verdes;
+- sem BLOCKER ou vulnerabilidade Critical/High sem mitigação;
+- release homologada.
