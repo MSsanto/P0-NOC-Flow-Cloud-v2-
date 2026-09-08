@@ -1,0 +1,24 @@
+# Glossário
+
+- **NOC:** Network Operations Center.
+- **Tenant:** operação logicamente isolada dentro da plataforma.
+- **Membership:** vínculo entre usuário e tenant, incluindo papel/permissões.
+- **Incident:** ocorrência operacional acompanhada pela plataforma.
+- **Timeline:** sequência append-only de eventos de um incidente.
+- **Initial Alert:** primeiro comunicado/registro operacional do incidente.
+- **Update:** atualização de situação, ação tomada e próximo passo.
+- **Normalization/Resolution:** registro de restabelecimento e encerramento técnico.
+- **Handover:** passagem de turno; snapshot versionado de contexto e pendências.
+- **Site:** unidade/localidade atendida pela operação.
+- **Circuit:** serviço de conectividade associado a unidade e operadora.
+- **Carrier:** operadora/provedor do serviço.
+- **Protocol Link:** referência externa como número de chamado/ITSM.
+- **Template:** modelo de comunicado versionado.
+- **ADR:** Architecture Decision Record.
+- **OIDC:** OpenID Connect.
+- **RBAC:** Role-Based Access Control.
+- **IDOR/BOLA:** falha de autorização em acesso a objetos por identificador.
+- **RLS:** Row-Level Security do PostgreSQL.
+- **P0/P1/P2...:** fases/prioridades do projeto; P0 é fundação documental.
+- **Seed:** conjunto controlado de dados iniciais para desenvolvimento/demo.
+- **Synthetic data:** dados inventados sem correspondência intencional com operação real.
