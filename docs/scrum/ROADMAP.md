@@ -1,96 +1,121 @@
 # Roadmap — P0 NOC Flow Cloud v2
 
-## P0 — Fundação documental
+**Status:** baseline aprovado para planejamento  
+**Modelo:** 6 Sprints de 2 semanas  
+**Objetivo de release:** v1.0.0 ao final da Sprint 6
 
-**Objetivo:** tornar o projeto implementável sem decisões essenciais implícitas.
+> O roadmap define a sequência de execução. Mudanças de escopo ou prioridade devem passar pelo Product Owner e ser coordenadas pelo Scrum Master/Orchestrator.
 
-Entregáveis:
+## Sprint 1 — Fundação Executável
 
-- [x] charter;
-- [x] visão;
-- [x] requisitos;
-- [x] arquitetura;
-- [x] domínio;
-- [x] modelo de dados;
-- [x] API conceitual;
-- [x] UX flows;
-- [x] segurança;
-- [x] estratégia de testes;
-- [x] Azure/DevOps;
-- [x] observabilidade;
-- [x] backlog;
-- [x] Definition of Done;
-- [x] riscos;
-- [x] estrutura documental Scrum;
-- [ ] revisão final dos ADRs;
-- [ ] aprovação para iniciar P1.
+**Release alvo:** `v0.1.0-alpha`
 
-## P1 — Core vertical
+Objetivo: entregar Angular + FastAPI + PostgreSQL executáveis, Docker/CI inicial e o primeiro vertical slice de incidentes.
 
-**Objetivo:** entregar a primeira fatia executável ponta a ponta.
+Principais entregas:
+- arquitetura baseline e ADRs essenciais;
+- UX inicial do fluxo de incidentes;
+- modelo de dados inicial e migrations;
+- security baseline;
+- fundação FastAPI e Angular;
+- criar, listar e detalhar incidente;
+- Docker Compose e CI inicial;
+- testes, code review, documentação e homologação.
 
-1. scaffold do repositório;
-2. PostgreSQL + migrations;
-3. autenticação abstraída + usuário de demonstração;
-4. tenants/memberships;
-5. sites/severidades;
-6. criar/listar/detalhar incidente;
-7. timeline básica;
-8. testes cross-tenant;
-9. Angular consumindo API real;
-10. CI inicial.
+## Sprint 2 — Incidentes & Timeline
 
-**Demo de saída:** usuário entra em tenant fictício, cria incidente e consulta timeline persistida.
+**Release alvo:** `v0.2.0-alpha`
 
-## P2 — Operação completa do MVP
+Objetivo: completar o ciclo operacional de incidente.
 
-- circuitos e operadoras;
-- atualização do incidente;
-- protocolos;
-- normalização e reabertura;
-- templates e comunicados;
+Principais entregas:
+- atualização de incidente;
+- normalização;
+- timeline append-only;
+- validação de transições;
+- paginação, filtros e ordenação;
+- estados UX de alerta, atualização e normalização;
+- testes negativos e de regressão.
+
+## Sprint 3 — Auth, RBAC & Multi-Tenancy
+
+**Release alvo:** `v0.3.0-beta`
+
+Objetivo: estabelecer identidade, autorização e isolamento seguro entre operações.
+
+Principais entregas:
+- OIDC/OAuth2 com Microsoft Entra ID ou abstração aprovada;
+- roles Admin, Supervisor, Operator e Viewer;
+- autorização server-side;
+- tenant context seguro;
+- isolamento por `tenant_id`;
+- testes cross-tenant e de broken access control.
+
+## Sprint 4 — Dashboard & Passagem de Turno
+
+**Release alvo:** `v0.4.0-beta`
+
+Objetivo: suportar continuidade operacional entre turnos NOC.
+
+Principais entregas:
 - dashboard operacional;
-- passagem de turno;
-- busca e filtros;
-- administração;
-- auditoria;
-- acessibilidade e refinamento de UX;
-- suíte E2E crítica.
+- incidentes críticos/ativos e pendências;
+- Shift Handover;
+- itens de passagem e próximos passos;
+- histórico de passagens;
+- filtros operacionais;
+- testes do fluxo de handover.
 
-## P3 — Cloud e qualidade operacional
+## Sprint 5 — Auditoria & Observabilidade
 
-- Dockerfiles finais;
-- Infrastructure as Code;
-- Azure dev/demo;
-- GitHub Actions completo;
-- Key Vault / Managed Identity quando aplicável;
-- Application Insights;
-- migrations e deploy seguro;
-- smoke tests;
-- backup/restore de demonstração;
-- runbook e rollback;
-- controle de custo.
+**Release alvo:** `v0.5.0-rc1`
 
-## P4 — Integrações
+Objetivo: tornar a aplicação rastreável, observável e resiliente.
 
-- webhook de monitoramento;
-- normalização de eventos;
-- correlação avançada;
-- adapter ITSM;
-- webhooks de saída;
-- filas/retries/DLQ quando justificados;
-- notificações assistidas.
+Principais entregas:
+- audit trail;
+- structured logging;
+- correlation ID;
+- health live/ready;
+- Application Insights ou solução equivalente aprovada;
+- testes de indisponibilidade e resiliência;
+- revisão de índices/performance;
+- rodada formal de AppSec.
 
-## P5 — Evoluções opcionais
+## Sprint 6 — Azure & Release v1.0
 
-- SSO corporativo específico;
+**Release alvo:** `v1.0.0`
+
+Objetivo: publicar, endurecer e homologar a primeira versão estável do projeto.
+
+Principais entregas:
+- ambientes development/test/staging/production;
+- deploy Azure;
+- pipeline final com gates;
+- smoke/regression/E2E;
+- hardening final;
+- documentação de deployment/runbook/rollback;
+- documentação de portfólio e screenshots;
+- homologação final.
+
+## Qualidade transversal
+
+Em todas as Sprints:
+- QA participa desde o refinamento;
+- Security revisa mudanças relevantes;
+- código passa por Code Review independente;
+- documentação impactada é atualizada;
+- Release/Homologation executa o quality gate;
+- itens Done devem atender à [Definition of Done](DEFINITION_OF_DONE.md).
+
+## Pós-v1.0
+
+Ficam fora do MVP inicial:
+- ServiceNow/ITSM;
+- integrações automáticas com operadoras;
+- webhooks e notificações;
 - analytics avançado;
-- regras configuráveis de SLA;
-- importação em massa;
-- feature flags;
-- PWA/mobile mediante necessidade comprovada;
-- assistência por IA somente com guardrails, explicabilidade e revisão humana.
-
-## Regra de evolução
-
-O roadmap descreve direção e sequência esperada, não compromisso fixo de datas. Mudanças de prioridade devem ser refletidas no [Product Backlog](PRODUCT_BACKLOG.md) e, quando relevantes, registradas nas Sprints correspondentes.
+- SLA configurável;
+- PWA/mobile;
+- LLM/RAG/agentes NOC;
+- classificação ou geração automática de comunicados.
