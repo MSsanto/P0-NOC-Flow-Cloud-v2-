@@ -9,6 +9,7 @@ Este diretório registra decisões arquiteturais relevantes e seus trade-offs.
 - [ADR-0003 — Lifecycle do incidente](0003-incident-lifecycle.md)
 - [ADR-0004 — Identidade OIDC](0004-identity.md)
 - [ADR-0005 — Política de dados públicos](0005-public-data-policy.md)
+- [ADR-0006 — Versionamento da API e contrato uniforme de erros](0006-api-versioning-and-errors.md)
 
 ## Quando criar um ADR
 

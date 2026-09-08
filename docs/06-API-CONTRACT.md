@@ -4,6 +4,15 @@ Base: `/api/v1`
 
 O OpenAPI gerado pelo FastAPI será fonte executável do contrato quando a implementação começar. Este documento define o desenho antes do código.
 
+## Versionamento
+
+- a versão principal faz parte da URL: `/api/v1`;
+- mudanças aditivas e retrocompatíveis permanecem em `v1`;
+- renomear/remover campos obrigatórios, mudar semântica de status ou alterar payload de forma incompatível exige nova versão principal ou migração explicitamente acordada;
+- endpoints em depreciação devem ser documentados no OpenAPI e mantidos durante uma janela definida quando houver consumidores ativos;
+- correções de bug que restauram o contrato documentado não criam nova versão;
+- o frontend deve consumir somente contratos publicados, sem depender de campos acidentais não documentados.
+
 ## Convenções
 
 - JSON em UTF-8;
@@ -13,6 +22,50 @@ O OpenAPI gerado pelo FastAPI será fonte executável do contrato quando a imple
 - `X-Request-ID` aceito/gerado e devolvido;
 - tenant ativo vem do contexto autorizado, nunca é aceito cegamente do body;
 - `Idempotency-Key` será exigida em endpoints de ingestão externa futura.
+
+## Contrato de erros
+
+Todo erro HTTP gerado pela aplicação deve possuir uma representação estável e não expor stack trace, SQL, tokens, secrets ou detalhes internos.
+
+Formato base:
+
+```json
+{
+  "type": "https://nocflow.example/problems/incident-state-conflict",
+  "title": "Incident state conflict",
+  "status": 409,
+  "detail": "The incident cannot transition from CLOSED to RESOLVED.",
+  "instance": "/api/v1/incidents/01J.../resolve",
+  "code": "INCIDENT_STATE_CONFLICT",
+  "request_id": "01J..."
+}
+```
+
+Campos:
+
+- `type`: identificador estável da classe do problema;
+- `title`: resumo legível e estável;
+- `status`: status HTTP;
+- `detail`: detalhe seguro para o consumidor;
+- `instance`: recurso/operação HTTP relacionada;
+- `code`: código de erro estável para tratamento programático;
+- `request_id`: correlação com logs e tracing.
+
+Erros de validação podem acrescentar:
+
+```json
+{
+  "errors": [
+    {
+      "field": "summary",
+      "code": "REQUIRED",
+      "message": "Field is required."
+    }
+  ]
+}
+```
+
+A UI pode traduzir mensagens para o usuário, mas deve usar `code`/`errors[].code` para comportamento programático quando necessário.
 
 ## Health
 
@@ -115,7 +168,7 @@ Renderizar não envia comunicação. Envio externo é P4 e sempre terá polític
 ## Códigos esperados
 
 - `200/201/204`: sucesso;
-- `400`: contrato inválido;
+- `400`: contrato inválido/requisição malformada;
 - `401`: não autenticado;
 - `403`: sem autorização no tenant/recurso;
 - `404`: recurso inexistente no contexto autorizado;
