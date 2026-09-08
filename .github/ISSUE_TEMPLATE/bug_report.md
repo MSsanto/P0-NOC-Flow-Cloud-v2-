@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: Reportar comportamento incorreto usando somente dados fictícios
- title: "bug: "
+title: "bug: "
 labels: ""
 assignees: ""
 ---
