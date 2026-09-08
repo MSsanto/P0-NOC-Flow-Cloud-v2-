@@ -84,6 +84,32 @@ flowchart LR
     API --> IDP
 ```
 
+## Documentação
+
+A documentação completa está em [`docs/INDEX.md`](docs/INDEX.md).
+
+Atalhos principais:
+
+- [Project Charter](docs/00-PROJECT-CHARTER.md)
+- [Product Vision](docs/01-PRODUCT-VISION.md)
+- [Requisitos](docs/02-REQUIREMENTS.md)
+- [Arquitetura](docs/03-ARCHITECTURE.md)
+- [Modelo de domínio](docs/04-DOMAIN-MODEL.md)
+- [Modelo de dados](docs/05-DATA-MODEL.md)
+- [Contrato da API v1](docs/06-API-CONTRACT.md)
+- [UX e fluxos](docs/07-UX-FLOWS.md)
+- [Segurança e privacidade](docs/08-SECURITY-PRIVACY.md)
+- [Estratégia de testes](docs/09-TEST-STRATEGY.md)
+- [DevOps/Azure](docs/10-DEVOPS-AZURE.md)
+- [Observabilidade](docs/11-OBSERVABILITY.md)
+- [Roadmap](docs/12-ROADMAP.md)
+- [Backlog](docs/13-BACKLOG.md)
+- [Definition of Done](docs/14-DEFINITION-OF-DONE.md)
+- [Riscos](docs/15-RISKS.md)
+- [Plano de implementação](docs/16-IMPLEMENTATION-PLAN.md)
+- [Rastreabilidade](docs/17-TRACEABILITY.md)
+- [ADRs](docs/adr/)
+
 ## Fases
 
 - **P0 — Fundação:** documentação, arquitetura, domínio, backlog, ADRs e critérios de aceite.
@@ -91,6 +117,25 @@ flowchart LR
 - **P2 — Operação:** dashboard, comunicados, passagem de turno, busca, UX e auditoria.
 - **P3 — Cloud:** Azure, CI/CD, observabilidade, segurança e ambiente de demonstração.
 - **P4 — Integrações:** monitoramento, ITSM, webhooks e automações assistidas.
+
+## Épicos no GitHub
+
+- [#1 — P0 Gate: revisar e aprovar fundação](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/issues/1)
+- [#2 — P1: fundação técnica e primeiro vertical](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/issues/2)
+- [#3 — P2: MVP operacional](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/issues/3)
+- [#4 — P3: Azure, CI/CD e observabilidade](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/issues/4)
+- [#5 — P4: integrações e automações assistidas](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/issues/5)
+
+## Estrutura reservada
+
+```text
+apps/
+  web/      # Angular — sem código durante P0
+  api/      # FastAPI — sem código durante P0
+infra/      # IaC/Cloud — sem provisionamento durante P0
+tests/      # E2E/contract/security — apenas planejamento durante P0
+docs/       # fonte de verdade documental
+```
 
 ## Regra atual
 
