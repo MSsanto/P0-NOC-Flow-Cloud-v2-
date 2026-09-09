@@ -15,7 +15,32 @@ Papéis mínimos: `platform_admin`, `tenant_admin`, `supervisor`, `analyst`, `vi
 Administradores devem manter unidades, circuitos, operadoras, contatos, severidades e templates.
 
 ### RF-005 — Incidente
-Analistas devem criar incidente com operação, unidade, severidade, origem, horário de detecção e descrição.
+Analistas devem criar incidente com operação, unidade, severidade, origem, horário de detecção e descrição no modelo operacional alvo.
+
+#### Recorte canônico da Sprint 1 — US-002
+
+Para a Sprint 1 — Fundação Executável, a criação de incidente usa deliberadamente um recorte mínimo do domínio, sem antecipar base operacional, autenticação completa ou severidades configuráveis.
+
+Campos obrigatórios recebidos pelo `POST /api/v1/incidents`:
+
+- `title`: 3–120 caracteres;
+- `affected_resource`: 2–120 caracteres;
+- `severity`: `CRITICAL | HIGH | MEDIUM | LOW`;
+- `impact_type`: `OUTAGE | DEGRADATION`;
+- `symptoms`: 10–2000 caracteres;
+- `started_at`: timestamp ISO-8601; não pode ser posterior ao momento do registro.
+
+Campos definidos pelo sistema/contexto e que não são autoridade do body:
+
+- `id`;
+- `status`, inicialmente `OPEN`;
+- `tenant_id` resolvido de contexto técnico autorizado/controlado;
+- ator/criador resolvido pelo backend;
+- `created_at` e `updated_at`.
+
+Durante a Sprint 1, tenant e ator podem vir de um provider de desenvolvimento/demo explicitamente isolado e sintético. Isso não substitui OIDC, memberships e RBAC planejados para a Sprint 3.
+
+A evolução para unidade/site, origem e severidade configurável ocorrerá por histórias e migrations posteriores. Os nomes e regras acima são o contrato canônico da US-002 e devem ser refletidos em OpenAPI, frontend, banco e testes da Sprint 1.
 
 ### RF-006 — Correlação
 O sistema deve sinalizar possível duplicidade considerando tenant, unidade/circuito, tipo de evento, estado e janela temporal configurável.
