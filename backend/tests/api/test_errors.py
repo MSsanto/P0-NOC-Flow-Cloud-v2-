@@ -17,10 +17,10 @@ def test_request_validation_uses_problem_details_contract() -> None:
 
     response = client.get("/api/v1/_test/validation?value=0")
 
-    assert response.status_code == 400
+    assert response.status_code == 422
     assert response.headers["content-type"].startswith("application/problem+json")
     body = response.json()
-    assert body["status"] == 400
+    assert body["status"] == 422
     assert body["type"] == "https://nocflow.example/problems/request-validation"
     assert body["code"] == "REQUEST_VALIDATION_ERROR"
     assert body["request_id"] == response.headers["X-Request-ID"]
