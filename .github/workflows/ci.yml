@@ -10,6 +10,23 @@ permissions:
   contents: read
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend_ready: ${{ steps.frontend.outputs.ready }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect frontend lockfile
+        id: frontend
+        run: |
+          if [ -f apps/web/package-lock.json ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
   backend:
     runs-on: ubuntu-latest
     services:
@@ -90,7 +107,8 @@ jobs:
           PY
 
   frontend:
-    if: ${{ hashFiles('apps/web/package-lock.json') != '' }}
+    needs: detect
+    if: ${{ needs.detect.outputs.frontend_ready == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -123,9 +141,9 @@ jobs:
         run: npm audit --audit-level=high
 
   compose-smoke:
-    if: ${{ hashFiles('apps/web/package-lock.json') != '' }}
+    needs: [detect, backend, frontend]
+    if: ${{ always() && needs.detect.outputs.frontend_ready == 'true' && needs.backend.result == 'success' && needs.frontend.result == 'success' }}
     runs-on: ubuntu-latest
-    needs: [backend, frontend]
 
     steps:
       - name: Checkout
