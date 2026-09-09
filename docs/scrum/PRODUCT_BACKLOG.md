@@ -1,6 +1,8 @@
 # Product Backlog — P0 NOC Flow Cloud v2
 
 > Fonte canônica do backlog priorizado do produto.
+>
+> As prioridades P0–P4 deste documento representam horizontes/criticidade de produto, não números de Sprint. A execução corrente é detalhada em `docs/scrum/SPRINT_001.md` e acompanhada operacionalmente no Trello. Quando houver divergência de granularidade, a Sprint refinada vigente define o recorte de entrega sem apagar requisitos do roadmap.
 
 ## Prioridades
 
@@ -27,7 +29,7 @@
 - [x] **P0-013** Definir observabilidade.
 - [x] **P0-014** Definir Definition of Done.
 - [x] **P0-015** Registrar riscos.
-- [ ] **P0-016** Revisar ADRs e aprovar início do P1.
+- [x] **P0-016** Revisar ADRs e aprovar início da fundação executável.
 
 ## P1 — Fundação técnica
 
@@ -41,22 +43,32 @@
 **Critério de aceite:** schema inicial recriável do zero; estratégia de rollback/downgrade documentada.
 
 ### P1-004 — Identidade
-**Critério de aceite:** usuário autenticado é mapeado internamente; backend não confia em campos de identidade fornecidos pelo frontend.
+**Critério de aceite alvo:** usuário autenticado é mapeado internamente; backend não confia em campos de identidade fornecidos pelo frontend.
+
+**Sequenciamento atual:** autenticação OIDC/RBAC completos foram alocados à Sprint 3. A Sprint 1 pode usar provider de desenvolvimento/demo isolado e sintético apenas para resolver ator/contexto técnico, sem backdoor em produção.
 
 ### P1-005 — Tenant e membership
-**Critério de aceite:** usuário lista apenas tenants autorizados; teste automatizado comprova isolamento cross-tenant.
+**Critério de aceite alvo:** usuário lista apenas tenants autorizados; teste automatizado comprova isolamento cross-tenant.
+
+**Sequenciamento atual:** memberships e troca de tenant entram na Sprint 3. Desde a Sprint 1, toda persistência de negócio continua tenant-scoped e o cliente não controla `tenant_id` pelo body.
 
 ### P1-006 — Base operacional mínima
-**Critério de aceite:** CRUD controlado de site e severidade com tenant scoping.
+**Critério de aceite alvo:** CRUD controlado de site e severidade com tenant scoping.
+
+**Sequenciamento atual:** a Sprint 1 não depende de `sites` nem severidades configuráveis; usa `affected_resource` textual e enum de severidade para entregar o primeiro vertical slice sem antecipar schema.
 
 ### P1-007 — Criar incidente
-**Critério de aceite:** criação válida persiste incidente e evento `INCIDENT_CREATED` atomicamente.
+**Critério de aceite da Sprint 1:** criação válida persiste incidente com os campos canônicos da US-002; status inicial `OPEN`; tenant e ator resolvidos pelo backend/contexto; entrada inválida não cria registro parcial.
+
+**Evolução:** evento append-only `INCIDENT_CREATED`, site estruturado, origem e severidade configurável entram com timeline/base operacional nos incrementos posteriores aprovados.
 
 ### P1-008 — Listar e detalhar incidente
-**Critério de aceite:** filtros básicos disponíveis; acesso a recurso de outro tenant retorna resposta segura.
+**Critério de aceite da Sprint 1:** listar e consultar detalhe pela API real, em ordem temporal, com tratamento de erro/404 e sempre limitado ao tenant do contexto autorizado.
 
 ### P1-009 — Frontend vertical
-**Critério de aceite:** Angular permite selecionar tenant, listar, criar e detalhar incidente consumindo a API real no caminho principal.
+**Critério de aceite da Sprint 1:** Angular permite listar, criar e detalhar incidente consumindo a API real no caminho principal, com loading/empty/error e validações coerentes com OpenAPI.
+
+**Evolução:** seleção/troca de tenant autenticada entra com identidade e memberships na Sprint 3.
 
 ### P1-010 — CI inicial
 **Critério de aceite:** lint, testes e build são executados em Pull Request.
