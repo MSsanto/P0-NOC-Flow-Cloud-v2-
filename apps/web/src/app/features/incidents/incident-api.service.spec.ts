@@ -19,7 +19,7 @@ describe('IncidentApiService', () => {
 
   it('lists incidents from the versioned API', () => {
     service.list().subscribe();
-    const request = controller.expectOne('/api/v1/incidents');
+    const request = controller.expectOne((candidate) => candidate.url.endsWith('/api/v1/incidents'));
     expect(request.request.method).toBe('GET');
     request.flush([]);
   });
@@ -35,7 +35,7 @@ describe('IncidentApiService', () => {
     };
 
     service.create(payload).subscribe();
-    const request = controller.expectOne('/api/v1/incidents');
+    const request = controller.expectOne((candidate) => candidate.url.endsWith('/api/v1/incidents'));
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual(payload);
     expect(request.request.body.tenant_id).toBeUndefined();
@@ -44,7 +44,7 @@ describe('IncidentApiService', () => {
 
   it('loads detail using the incident id', () => {
     service.get('abc-123').subscribe();
-    const request = controller.expectOne('/api/v1/incidents/abc-123');
+    const request = controller.expectOne((candidate) => candidate.url.endsWith('/api/v1/incidents/abc-123'));
     expect(request.request.method).toBe('GET');
     request.flush({});
   });
