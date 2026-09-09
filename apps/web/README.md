@@ -7,14 +7,18 @@ A fundação inicial é entregue pela EN-004 da Sprint 1 e estabelece routing, s
 ## Requisitos
 
 - Node.js `>=22.22.3`
-- npm compatível com a versão instalada do Node.js
+- npm 11 para geração/atualização do lockfile
+- `package-lock.json` versionado para builds reproduzíveis com `npm ci`
 
 ## Desenvolvimento local
 
 ```bash
-npm install
+npm install --global npm@11
+npm ci
 npm start
 ```
+
+Quando as dependências forem alteradas intencionalmente, atualizar o lockfile com npm 11 e revisar o diff antes de versionar.
 
 Por padrão, o ambiente de desenvolvimento consome a API em:
 
