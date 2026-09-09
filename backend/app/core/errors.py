@@ -122,11 +122,11 @@ async def request_validation_error_handler(
         for error in exc.errors()
     ]
     return JSONResponse(
-        status_code=400,
+        status_code=422,
         media_type="application/problem+json",
         content=_problem_payload(
             request,
-            status=400,
+            status=422,
             title="Request validation failed",
             detail="Request payload or parameters are invalid.",
             code="REQUEST_VALIDATION_ERROR",
