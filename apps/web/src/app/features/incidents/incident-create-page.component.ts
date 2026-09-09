@@ -5,6 +5,7 @@ import { finalize } from 'rxjs';
 
 import { ApiError } from '../../core/http/api-error';
 import { IncidentApiService } from './incident-api.service';
+import { localDateTimeMax, notFutureDateTime, trimmedLength } from './incident-form.validators';
 import { IncidentCreateRequest, IncidentImpactType, IncidentSeverity } from './incident.model';
 
 @Component({
@@ -24,12 +25,12 @@ import { IncidentCreateRequest, IncidentImpactType, IncidentSeverity } from './i
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <label>Título/resumo
           <input formControlName="title" maxlength="120" autocomplete="off" />
-          <small>3–120 caracteres.</small>
+          <small>3–120 caracteres úteis.</small>
         </label>
 
         <label>Recurso ou serviço afetado
           <input formControlName="affected_resource" maxlength="120" autocomplete="off" />
-          <small>2–120 caracteres.</small>
+          <small>2–120 caracteres úteis.</small>
         </label>
 
         <div class="row">
@@ -46,17 +47,17 @@ import { IncidentCreateRequest, IncidentImpactType, IncidentSeverity } from './i
         </div>
 
         <label>Sintomas / descrição
-          <textarea formControlName="symptoms" minlength="10" maxlength="2000" rows="6"></textarea>
-          <small>10–2000 caracteres.</small>
+          <textarea formControlName="symptoms" maxlength="2000" rows="6"></textarea>
+          <small>10–2000 caracteres úteis.</small>
         </label>
 
         <label>Início do incidente
-          <input type="datetime-local" formControlName="started_at" />
+          <input type="datetime-local" formControlName="started_at" [max]="maxStartedAt" />
           <small>Não pode estar no futuro.</small>
         </label>
 
         @if (form.invalid && form.touched) {
-          <p class="validation" role="alert">Revise os campos obrigatórios e os limites indicados.</p>
+          <p class="validation" role="alert">Revise os campos obrigatórios, espaços em branco, limites e a data de início.</p>
         }
 
         <div class="actions">
@@ -92,14 +93,15 @@ export class IncidentCreatePageComponent {
   readonly impactTypes: IncidentImpactType[] = ['OUTAGE', 'DEGRADATION'];
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
+  readonly maxStartedAt = localDateTimeMax();
 
   readonly form = this.fb.nonNullable.group({
-    title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
-    affected_resource: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
+    title: ['', [Validators.required, trimmedLength(3, 120)]],
+    affected_resource: ['', [Validators.required, trimmedLength(2, 120)]],
     severity: ['HIGH' as IncidentSeverity, Validators.required],
     impact_type: ['OUTAGE' as IncidentImpactType, Validators.required],
-    symptoms: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(2000)]],
-    started_at: ['', Validators.required],
+    symptoms: ['', [Validators.required, trimmedLength(10, 2000)]],
+    started_at: ['', [Validators.required, notFutureDateTime]],
   });
 
   submit(): void {
@@ -108,12 +110,18 @@ export class IncidentCreatePageComponent {
 
     const value = this.form.getRawValue();
     const startedAt = new Date(value.started_at);
-    if (Number.isNaN(startedAt.getTime())) {
-      this.error.set('Data/hora de início inválida.');
+    if (Number.isNaN(startedAt.getTime()) || startedAt.getTime() > Date.now()) {
+      this.form.controls.started_at.updateValueAndValidity();
       return;
     }
 
-    const payload: IncidentCreateRequest = { ...value, started_at: startedAt.toISOString() };
+    const payload: IncidentCreateRequest = {
+      ...value,
+      title: value.title.trim(),
+      affected_resource: value.affected_resource.trim(),
+      symptoms: value.symptoms.trim(),
+      started_at: startedAt.toISOString(),
+    };
     this.error.set(null);
     this.submitting.set(true);
     this.api.create(payload).pipe(finalize(() => this.submitting.set(false))).subscribe({
