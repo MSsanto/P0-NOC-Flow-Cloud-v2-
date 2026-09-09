@@ -1,4 +1,8 @@
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
@@ -6,9 +10,7 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 
-import { ApiError } from './api-error';
 import { apiErrorInterceptor } from './api-error.interceptor';
-import { HttpClient } from '@angular/common/http';
 
 describe('apiErrorInterceptor', () => {
   let http: HttpClient;
@@ -45,7 +47,7 @@ describe('apiErrorInterceptor', () => {
       },
     );
 
-    await expect(response).rejects.toMatchObject<ApiError>({
+    await expect(response).rejects.toMatchObject({
       name: 'ApiError',
       status: 404,
       message: 'Incidente não encontrado.',
