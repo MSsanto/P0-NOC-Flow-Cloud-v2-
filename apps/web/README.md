@@ -18,7 +18,7 @@ npm ci
 npm start
 ```
 
-Quando as dependências forem alteradas intencionalmente, atualizar o lockfile com npm 11 e revisar o diff antes de versionar.
+Quando as dependências forem alteradas intencionalmente, atualizar o lockfile com npm 11 e revisar o diff antes de versionar. O lockfile da fundação foi gerado em ambiente limpo de CI e está versionado no repositório.
 
 Por padrão, o ambiente de desenvolvimento consome a API em:
 
@@ -40,7 +40,7 @@ npm test
 npm run lint
 ```
 
-O workflow `Frontend Foundation` executa a mesma sequência em ambiente limpo e publica o lockfile gerado como artefato enquanto a fundação é consolidada.
+O workflow `Frontend Foundation` executa a mesma sequência em ambiente limpo e valida a reprodutibilidade das dependências.
 
 > `lint` nesta fundação executa a checagem estrita do TypeScript. Uma ferramenta dedicada de lint poderá ser adicionada pelo fluxo de qualidade/DevOps sem alterar contratos de domínio.
 
