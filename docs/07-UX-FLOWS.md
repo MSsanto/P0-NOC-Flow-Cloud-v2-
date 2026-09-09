@@ -42,22 +42,51 @@ Governança
 
 ## Fluxo 1 — Criar incidente
 
-1. Dashboard → “Novo incidente”.
+### Sprint 1 — fluxo canônico
+
+1. Incidentes → “Novo incidente”.
+2. Informar título/resumo curto.
+3. Informar recurso/serviço afetado.
+4. Selecionar severidade: `CRITICAL`, `HIGH`, `MEDIUM` ou `LOW`.
+5. Selecionar tipo de impacto: `OUTAGE` ou `DEGRADATION`.
+6. Informar sintomas/descrição.
+7. Informar início do incidente.
+8. Validar campos e limites antes do envio.
+9. Salvar.
+10. Em sucesso, navegar para o detalhe do incidente criado.
+
+Estados obrigatórios do formulário:
+
+- inicial;
+- inválido com mensagens associadas aos campos;
+- envio/loading sem duplo submit;
+- erro recuperável mantendo os dados digitados;
+- sucesso com navegação para o detalhe.
+
+Tenant e ator não são campos editáveis do formulário. Na Sprint 1 são resolvidos por contexto técnico controlado do backend; autenticação, memberships e troca de tenant entram no incremento próprio.
+
+Critério UX da Sprint 1: permitir criação rápida e inequívoca sem exigir cadastro de base operacional ainda não implementado.
+
+### Modelo alvo do produto
+
+Quando base operacional, correlação e severidades configuráveis estiverem disponíveis, o fluxo evolui para:
+
+1. Dashboard/Incidentes → “Novo incidente”.
 2. Selecionar unidade ou localizar por código/nome.
 3. Sistema mostra circuitos e incidentes ativos correlatos.
 4. Selecionar severidade e origem.
 5. Informar detecção e resumo.
 6. Sistema alerta possível duplicidade antes de salvar.
 7. Salvar.
-8. Usuário cai na página do incidente com CTA de “Registrar alerta inicial”.
+8. Usuário cai na página do incidente.
 
-Critério UX: não exigir que o analista navegue à base operacional para copiar dados já relacionados à unidade.
+Critério UX alvo: não exigir que o analista navegue à base operacional para copiar dados já relacionados à unidade.
 
 ## Fluxo 2 — Atualizar incidente
 
 Na página do incidente:
 
-- cabeçalho compacto com ID, unidade, severidade, status e idade;
+- cabeçalho compacto com ID, unidade/recurso, severidade, status e idade;
 - situação atual em destaque;
 - timeline cronológica;
 - formulário rápido de atualização;
