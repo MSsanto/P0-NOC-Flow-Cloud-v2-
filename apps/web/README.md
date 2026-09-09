@@ -40,6 +40,8 @@ npm test
 npm run lint
 ```
 
+O workflow `Frontend Foundation` executa a mesma sequência em ambiente limpo e publica o lockfile gerado como artefato enquanto a fundação é consolidada.
+
 > `lint` nesta fundação executa a checagem estrita do TypeScript. Uma ferramenta dedicada de lint poderá ser adicionada pelo fluxo de qualidade/DevOps sem alterar contratos de domínio.
 
 ## Estrutura inicial
