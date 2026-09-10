@@ -39,7 +39,8 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 - [ADR-0003 — Lifecycle do incidente](adr/0003-incident-lifecycle.md)
 - [ADR-0004 — Identidade OIDC](adr/0004-identity.md)
 - [ADR-0005 — Política de dados públicos](adr/0005-public-data-policy.md)
-- [ADR-0006 — Versionamento da API e erros](adr/0006-api-versioning-and-error-contract.md)
+- [ADR-0006 — Versionamento da API e erros](adr/0006-api-versioning-and-errors.md)
+- [ADR-0007 — IDs e migrations da Sprint 1](adr/0007-sprint1-ids-and-migrations.md)
 
 ## API
 
