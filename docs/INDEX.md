@@ -11,9 +11,14 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 - [Roadmap](scrum/ROADMAP.md)
 - [Definition of Ready](scrum/DEFINITION_OF_READY.md)
 - [Definition of Done](scrum/DEFINITION_OF_DONE.md)
-- [Sprint 001](scrum/SPRINT_001.md)
+- [Sprint 001 — contrato detalhado](scrum/SPRINT_001.md)
+- [Sprint 1 — resumo e evidências](sprints/SPRINT_01.md)
 - [Sprint 002](scrum/SPRINT_002.md)
 - [Retrospectives](scrum/RETROSPECTIVES.md)
+
+## Release e homologação
+
+- [Roteiro de homologação — v0.1.0-alpha](releases/V0.1.0-ALPHA-HOMOLOGATION.md)
 
 ## Arquitetura
 
@@ -34,11 +39,12 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 - [ADR-0003 — Lifecycle do incidente](adr/0003-incident-lifecycle.md)
 - [ADR-0004 — Identidade OIDC](adr/0004-identity.md)
 - [ADR-0005 — Política de dados públicos](adr/0005-public-data-policy.md)
+- [ADR-0006 — Versionamento da API e erros](adr/0006-api-versioning-and-error-contract.md)
 
 ## API
 
 - [Índice da API](api/README.md)
-- [Contrato conceitual da API v1](06-API-CONTRACT.md)
+- [Contrato da API v1](06-API-CONTRACT.md)
 
 ## UX
 
