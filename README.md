@@ -1,150 +1,201 @@
 # P0 — NOC Flow Cloud v2
 
-> Evolução cloud, multiusuário e auditável do NOC Flow, planejada antes da implementação.
+> Plataforma web de portfólio para o ciclo operacional de incidentes em NOC, construída com Angular, FastAPI, PostgreSQL, Docker e GitHub Actions.
 
-**Status:** 🟦 P0 — Discovery, arquitetura e documentação  
-**Código de aplicação:** ainda não iniciado  
+**Status:** 🟢 Sprint 1 — Fundação Executável concluída tecnicamente  
+**Release candidata:** `v0.1.0-alpha`  
 **Autor:** Matheus Santo  
 **Repositório:** `MSsanto/P0-NOC-Flow-Cloud-v2-`
 
-## Objetivo
+## O que funciona na Sprint 1
 
-O NOC Flow Cloud v2 será uma plataforma web para organizar o ciclo operacional de incidentes de conectividade em um NOC: receber/registrar alertas, correlacionar eventos, preparar comunicados padronizados, acompanhar atualizações, registrar normalizações, manter histórico auditável e gerar passagem de turno.
+O primeiro vertical slice executável permite:
 
-A v2 parte dos conceitos validados no NOC Flow público, mas abandona a limitação de persistência apenas no navegador e passa a ser desenhada para colaboração entre analistas, segregação por operação, autenticação, API, banco de dados central, observabilidade e implantação em nuvem.
+- listar incidentes do tenant/contexto atual;
+- registrar novo incidente com validação frontend e backend;
+- visualizar o detalhe do incidente por ID;
+- persistir dados em PostgreSQL;
+- executar migrations com Alembic;
+- consumir a API FastAPI pelo Angular;
+- executar frontend, backend e banco via Docker Compose;
+- validar type-check/lint, testes, build, dependency audits e smoke funcional no GitHub Actions.
 
-## Princípios do projeto
+O contexto de identidade da Sprint 1 é **somente demo em `development`/`test`**. Deploy público/produção permanece fora do escopo até autenticação e autorização reais.
 
-1. **Documentar antes de programar.** Arquitetura, domínio, fluxos e critérios de aceite serão definidos antes da implementação.
-2. **Sem dados corporativos reais.** Repositório, testes, screenshots e seeds usarão somente dados fictícios.
-3. **Multioperação desde o domínio.** Toda entidade de negócio deve respeitar isolamento por tenant/operação.
-4. **Auditoria por padrão.** Alterações relevantes devem ser rastreáveis.
-5. **API-first.** Front-end e integrações consomem contratos versionados.
-6. **Cloud-ready, local-friendly.** Desenvolvimento local simples; produção planejada para Azure.
-7. **Automação com revisão humana.** O sistema auxilia o operador, não oculta decisões operacionais.
-8. **Acessibilidade e ergonomia de plantão.** Uso intenso em desktop/notebook, com navegação rápida e feedback claro.
+## Stack executável
 
-## Stack planejada
-
-| Camada | Tecnologia planejada |
+| Camada | Tecnologia |
 |---|---|
-| Front-end | Angular + TypeScript |
-| API | FastAPI + Python |
-| Persistência | PostgreSQL |
-| Contratos | OpenAPI 3.x |
-| Autenticação | OIDC/OAuth2, com Microsoft Entra ID como alvo de produção |
-| Testes | Pytest, Angular Testing, Playwright |
-| Contêineres | Docker |
-| Cloud | Microsoft Azure |
-| CI/CD | GitHub Actions |
-| Observabilidade | Azure Application Insights / Log Analytics + logs estruturados |
+| Frontend | Angular 22 + TypeScript |
+| API | FastAPI + Python 3.12 |
+| Persistência | PostgreSQL 17 + SQLAlchemy + Alembic |
+| Testes | Pytest + Angular Testing/Vitest |
+| Contêineres | Docker + Docker Compose |
+| Web/Proxy | Nginx |
+| CI | GitHub Actions |
+| Segurança de dependências | `pip-audit` + `npm audit` |
+| Cloud alvo | Microsoft Azure |
 
-> As escolhas acima são decisões de arquitetura P0 e poderão ser alteradas por ADR antes de a implementação depender delas.
+## Executar com Docker
 
-## Escopo funcional planejado
+Requisito: Docker com Compose.
 
-- autenticação e controle de acesso por operação;
-- cadastro de operações, unidades, circuitos, operadoras, contatos, severidades e templates;
-- ingestão manual e futura ingestão por integração de eventos de monitoramento;
-- correlação e prevenção de duplicidades;
-- ciclo de incidente com alerta inicial, atualizações e normalização;
-- vínculos com protocolo/ITSM e circuito;
-- próximos passos operacionais;
-- timeline completa do incidente;
-- dashboard do plantão;
-- busca, filtros e histórico;
-- passagem de turno versionada;
-- exportação controlada;
-- trilha de auditoria;
-- tema claro/escuro e acessibilidade;
-- demonstração pública com dados sintéticos.
+```bash
+git clone https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-.git
+cd P0-NOC-Flow-Cloud-v2-
+docker compose up -d --build
+```
 
-## Fora do MVP
+Acesse:
 
-- envio autônomo de mensagens para clientes;
-- automação de ações destrutivas em operadoras ou equipamentos;
-- armazenamento de credenciais de rede de clientes;
-- descoberta de topologia em tempo real;
-- billing/comercialização SaaS;
-- machine learning para decisão operacional automática.
+- Frontend: `http://localhost:4200/`
+- API: `http://localhost:8000/api/v1`
+- Swagger: `http://localhost:8000/api/v1/docs`
+- OpenAPI JSON: `http://localhost:8000/api/v1/openapi.json`
+- Readiness: `http://localhost:8000/api/v1/health/ready`
+- PostgreSQL: `localhost:5432`
 
-## Arquitetura-alvo
+Para encerrar:
+
+```bash
+docker compose down -v
+```
+
+> As credenciais do Compose são exclusivamente para desenvolvimento local e não devem ser reutilizadas em staging/produção.
+
+## Executar sem Docker
+
+### Backend
+
+```bash
+cd backend
+python -m venv .venv
+# ative o ambiente virtual
+python -m pip install -e ".[dev]"
+alembic upgrade head
+uvicorn app.main:app --reload
+```
+
+### Frontend
+
+```bash
+cd apps/web
+npm install --global npm@11
+npm ci
+npm start
+```
+
+## Qualidade e CI
+
+O pipeline principal executa:
+
+```text
+detect
+├─ backend: install → Ruff → Alembic/PostgreSQL → pytest → pip-audit → readiness
+├─ frontend: npm ci → type-check → testes → production build → npm audit
+└─ compose-smoke: build stack → functional smoke → cleanup
+```
+
+O smoke funcional percorre Nginx → FastAPI → PostgreSQL e valida a jornada **criar → listar → detalhar**, além de caso negativo para campo de autoridade `tenant_id`.
+
+Comandos locais úteis:
+
+```bash
+# backend
+cd backend
+ruff check .
+pytest
+
+# frontend
+cd apps/web
+npm run lint
+npm test
+npm run build
+```
+
+## API da Sprint 1
+
+```text
+GET  /api/v1/incidents
+POST /api/v1/incidents
+GET  /api/v1/incidents/{incident_id}
+GET  /api/v1/health/live
+GET  /api/v1/health/ready
+```
+
+Exemplo de criação:
+
+```json
+{
+  "title": "WAN indisponível",
+  "affected_resource": "DEMO-SJC-EDGE-01",
+  "severity": "HIGH",
+  "impact_type": "OUTAGE",
+  "symptoms": "Conectividade indisponível para a unidade de demonstração.",
+  "started_at": "2026-09-10T12:00:00Z"
+}
+```
+
+`tenant_id`, autor, ID, timestamps e status inicial são autoridade do servidor e não são aceitos como campos do body de criação.
+
+## Segurança da alpha
+
+A Sprint 1 inclui tenant scoping server-side, Pydantic/constraints, CORS allowlist, Problem Details, container backend não-root, headers de segurança no Nginx e audits de dependências no CI.
+
+A `v0.1.0-alpha` é homologável **somente como ambiente local/teste**. OIDC, RBAC e identidade confiável serão implementados em incremento posterior; por isso produção permanece bloqueada por design.
+
+## Arquitetura resumida
 
 ```mermaid
 flowchart LR
-    U[Analista NOC] --> WEB[Angular Web App]
-    WEB -->|HTTPS / OIDC| API[FastAPI / API v1]
+    U[Analista NOC] --> WEB[Angular / Nginx]
+    WEB -->|/api/v1| API[FastAPI]
     API --> DB[(PostgreSQL)]
-    API --> AUDIT[(Audit Log)]
-    API --> OBS[Observabilidade]
-    API --> EXT[Adapters de Integração]
-    EXT -. futuro .-> MON[Monitoramento]
-    EXT -. futuro .-> ITSM[ITSM]
-    WEB --> IDP[Identity Provider]
-    API --> IDP
+    CI[GitHub Actions] --> WEB
+    CI --> API
+    CI --> DB
+    AZ[Azure - roadmap] -.-> WEB
+    AZ -.-> API
+    AZ -.-> DB
+```
+
+## Estrutura
+
+```text
+apps/web/                   # Angular
+backend/                    # FastAPI, domínio, SQLAlchemy, Alembic e testes
+compose.yaml                # stack local integrada
+.github/workflows/          # gates de CI
+docs/                       # requisitos, arquitetura, Scrum e evidências
 ```
 
 ## Documentação
 
 A documentação completa está em [`docs/INDEX.md`](docs/INDEX.md).
 
-Atalhos principais:
+Destaques:
 
-- [Project Charter](docs/00-PROJECT-CHARTER.md)
-- [Product Vision](docs/01-PRODUCT-VISION.md)
-- [Requisitos](docs/02-REQUIREMENTS.md)
+- [Sprint 1 — evidências](docs/sprints/SPRINT_01.md)
+- [Roteiro de homologação da v0.1.0-alpha](docs/releases/V0.1.0-ALPHA-HOMOLOGATION.md)
+- [Contrato da API](docs/06-API-CONTRACT.md)
 - [Arquitetura](docs/03-ARCHITECTURE.md)
-- [Modelo de domínio](docs/04-DOMAIN-MODEL.md)
 - [Modelo de dados](docs/05-DATA-MODEL.md)
-- [Contrato da API v1](docs/06-API-CONTRACT.md)
-- [UX e fluxos](docs/07-UX-FLOWS.md)
-- [Segurança e privacidade](docs/08-SECURITY-PRIVACY.md)
+- [Segurança](docs/08-SECURITY-PRIVACY.md)
 - [Estratégia de testes](docs/09-TEST-STRATEGY.md)
-- [DevOps/Azure](docs/10-DEVOPS-AZURE.md)
-- [Observabilidade](docs/11-OBSERVABILITY.md)
-- [Roadmap](docs/12-ROADMAP.md)
-- [Backlog](docs/13-BACKLOG.md)
-- [Definition of Done](docs/14-DEFINITION-OF-DONE.md)
-- [Riscos](docs/15-RISKS.md)
-- [Plano de implementação](docs/16-IMPLEMENTATION-PLAN.md)
-- [Rastreabilidade](docs/17-TRACEABILITY.md)
 - [ADRs](docs/adr/)
 
-## Fases
+## Roadmap
 
-- **P0 — Fundação:** documentação, arquitetura, domínio, backlog, ADRs e critérios de aceite.
-- **P1 — Core:** autenticação, tenants, base operacional, incidentes, timeline e API.
-- **P2 — Operação:** dashboard, comunicados, passagem de turno, busca, UX e auditoria.
-- **P3 — Cloud:** Azure, CI/CD, observabilidade, segurança e ambiente de demonstração.
-- **P4 — Integrações:** monitoramento, ITSM, webhooks e automações assistidas.
+- **Sprint 2:** atualizações, normalização, timeline e filtros de incidentes;
+- **Sprint 3:** autenticação, RBAC e multi-tenancy confiável;
+- **Sprint 4:** dashboard e passagem de turno;
+- **Sprint 5:** auditoria e observabilidade;
+- **Sprint 6:** Azure e release v1.0.
 
-## Épicos no GitHub
+## Segurança e dados públicos
 
-- [#1 — P0 Gate: revisar e aprovar fundação](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/issues/1)
-- [#2 — P1: fundação técnica e primeiro vertical](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/issues/2)
-- [#3 — P2: MVP operacional](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/issues/3)
-- [#4 — P3: Azure, CI/CD e observabilidade](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/issues/4)
-- [#5 — P4: integrações e automações assistidas](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/issues/5)
-
-## Estrutura reservada
-
-```text
-apps/
-  web/      # Angular — sem código durante P0
-  api/      # FastAPI — sem código durante P0
-infra/      # IaC/Cloud — sem provisionamento durante P0
-tests/      # E2E/contract/security — apenas planejamento durante P0
-docs/       # fonte de verdade documental
-```
-
-## Regra atual
-
-**Nenhuma feature de aplicação deve ser implementada enquanto o P0 documental não estiver aprovado.** Neste momento, o repositório é deliberadamente documentation-first.
-
-## Segurança e publicação
-
-Todo conteúdo publicado deve ser fictício. Não devem entrar no Git: clientes reais, nomes de lojas/unidades reais, CNPJ, endereços, telefones, circuitos, designações, contatos internos, tokens, credenciais, backups operacionais ou exports de produção.
+Não devem entrar no Git dados corporativos reais, CNPJ/endereço/telefone reais de lojas, circuitos/designações reais, contatos internos, tokens, credenciais, backups ou exports de produção.
 
 ## Licença
 
-Projeto público de portfólio. A visibilidade pública não concede automaticamente direito de reutilização. Consulte `LICENSE.md` antes de copiar ou redistribuir conteúdo.
+Projeto público de portfólio. Consulte `LICENSE.md` antes de reutilizar ou redistribuir conteúdo.
