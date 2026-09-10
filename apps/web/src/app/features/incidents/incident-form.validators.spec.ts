@@ -44,8 +44,8 @@ describe('incident form validators', () => {
     expect(control.valid).toBe(true);
   });
 
-  it('formats the datetime-local maximum in local time', () => {
-    const reference = new Date('2026-09-09T15:42:30-03:00');
+  it('formats the datetime-local maximum in the runtime local time', () => {
+    const reference = new Date(2026, 8, 9, 15, 42, 30);
 
     expect(localDateTimeMax(reference)).toBe('2026-09-09T15:42');
   });
