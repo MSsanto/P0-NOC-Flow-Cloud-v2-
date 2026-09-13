@@ -11,3 +11,4 @@ router.add_api_route(
     responses={422: {"model": ProblemDetails}},
     tags=["incidents"],
 )
+router.routes.insert(0, router.routes.pop())
