@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -37,3 +38,6 @@ class IncidentPage:
     page: int
     page_size: int
     total: int
+
+    def __iter__(self) -> Iterator[Incident]:
+        return iter(self.items)
