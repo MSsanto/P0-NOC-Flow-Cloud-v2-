@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.modules.incidents.domain.entities import (
+    IncidentEventType,
     IncidentImpactType,
     IncidentSeverity,
     IncidentStatus,
@@ -21,6 +22,18 @@ class IncidentCreateRequest(BaseModel):
     started_at: datetime
 
 
+class IncidentUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    message: str = Field(min_length=3, max_length=2000)
+
+
+class IncidentNormalizeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    note: str | None = Field(default=None, min_length=3, max_length=2000)
+
+
 class IncidentResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -35,3 +48,14 @@ class IncidentResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     version: int
+
+
+class IncidentEventResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    incident_id: UUID
+    event_type: IncidentEventType
+    message: str | None
+    actor_subject: str
+    occurred_at: datetime
