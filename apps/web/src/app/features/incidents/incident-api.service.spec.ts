@@ -48,4 +48,36 @@ describe('IncidentApiService', () => {
     expect(request.request.method).toBe('GET');
     request.flush({});
   });
+
+  it('loads the incident timeline', () => {
+    service.timeline('abc-123').subscribe();
+    const request = controller.expectOne((candidate) =>
+      candidate.url.endsWith('/api/v1/incidents/abc-123/timeline'),
+    );
+    expect(request.request.method).toBe('GET');
+    request.flush([]);
+  });
+
+  it('posts an operational update without authority fields', () => {
+    service.addUpdate('abc-123', { message: 'Operadora acionada.' }).subscribe();
+    const request = controller.expectOne((candidate) =>
+      candidate.url.endsWith('/api/v1/incidents/abc-123/updates'),
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ message: 'Operadora acionada.' });
+    expect(request.request.body.actor_subject).toBeUndefined();
+    expect(request.request.body.tenant_id).toBeUndefined();
+    request.flush({});
+  });
+
+  it('posts normalization with an optional note', () => {
+    service.normalize('abc-123', { note: 'Serviço restabelecido.' }).subscribe();
+    const request = controller.expectOne((candidate) =>
+      candidate.url.endsWith('/api/v1/incidents/abc-123/normalize'),
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ note: 'Serviço restabelecido.' });
+    expect(request.request.body.actor_subject).toBeUndefined();
+    request.flush({});
+  });
 });
