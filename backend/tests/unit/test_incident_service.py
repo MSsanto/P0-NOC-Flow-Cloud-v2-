@@ -3,6 +3,7 @@ from uuid import UUID
 
 import pytest
 
+from app.modules.incidents.application.queries import IncidentListQuery, IncidentPage
 from app.modules.incidents.application.services import (
     IncidentAlreadyNormalizedError,
     IncidentCannotBeUpdatedError,
@@ -18,8 +19,14 @@ class InMemoryIncidentRepository:
         self.items = []
         self.events = []
 
-    def list_for_tenant(self, tenant_id: UUID):
-        return [item for item in self.items if item.tenant_id == tenant_id]
+    def list_for_tenant(self, tenant_id: UUID, query: IncidentListQuery):
+        items = [item for item in self.items if item.tenant_id == tenant_id]
+        return IncidentPage(
+            items=items[query.offset : query.offset + query.page_size],
+            page=query.page,
+            page_size=query.page_size,
+            total=len(items),
+        )
 
     def get_for_tenant(self, tenant_id: UUID, incident_id: UUID):
         return next(
@@ -72,8 +79,12 @@ def test_create_list_get_and_timeline_are_tenant_scoped() -> None:
     incident = _create(service, tenant_a)
 
     assert incident.status.value == "OPEN"
-    assert service.list_incidents(tenant_a) == [incident]
-    assert service.list_incidents(tenant_b) == []
+    page_a = service.list_incidents(tenant_a, IncidentListQuery())
+    page_b = service.list_incidents(tenant_b, IncidentListQuery())
+    assert page_a.items == [incident]
+    assert page_a.total == 1
+    assert page_b.items == []
+    assert page_b.total == 0
     assert service.get_incident(tenant_a, incident.id) == incident
     assert service.get_incident(tenant_b, incident.id) is None
 

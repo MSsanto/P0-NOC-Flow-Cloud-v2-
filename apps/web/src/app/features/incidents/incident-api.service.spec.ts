@@ -17,11 +17,29 @@ describe('IncidentApiService', () => {
 
   afterEach(() => controller.verify());
 
-  it('lists incidents from the versioned API', () => {
-    service.list().subscribe();
-    const request = controller.expectOne((candidate) => candidate.url.endsWith('/api/v1/incidents'));
+  it('lists incidents with validated query parameters', () => {
+    service
+      .list({
+        status: 'OPEN',
+        severity: 'HIGH',
+        page: 2,
+        page_size: 25,
+        sort: 'updated_at',
+        order: 'asc',
+      })
+      .subscribe();
+
+    const request = controller.expectOne((candidate) =>
+      candidate.url.endsWith('/api/v1/incidents/query'),
+    );
     expect(request.request.method).toBe('GET');
-    request.flush([]);
+    expect(request.request.params.get('status')).toBe('OPEN');
+    expect(request.request.params.get('severity')).toBe('HIGH');
+    expect(request.request.params.get('page')).toBe('2');
+    expect(request.request.params.get('page_size')).toBe('25');
+    expect(request.request.params.get('sort')).toBe('updated_at');
+    expect(request.request.params.get('order')).toBe('asc');
+    request.flush({ items: [], page: 2, page_size: 25, total: 0 });
   });
 
   it('creates an incident without authority fields', () => {

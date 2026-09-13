@@ -1,0 +1,159 @@
+name: Sprint 2 Functional Smoke
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sprint2-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and start stack
+        run: docker compose up -d --build
+
+      - name: Validate Sprint 2 incident flow
+        run: |
+          python - <<'PY'
+          from datetime import UTC, datetime, timedelta
+          from urllib.parse import urlencode
+          import json
+          import time
+          import urllib.error
+          import urllib.request
+
+          def wait_ok(url: str) -> None:
+              for _ in range(60):
+                  try:
+                      with urllib.request.urlopen(url, timeout=2) as response:
+                          if response.status == 200:
+                              return
+                  except (urllib.error.URLError, ConnectionError):
+                      time.sleep(1)
+              raise SystemExit(f"Smoke failed for {url}")
+
+          def request_json(url: str, *, method: str = "GET", payload=None):
+              data = None if payload is None else json.dumps(payload).encode()
+              request = urllib.request.Request(
+                  url,
+                  data=data,
+                  method=method,
+                  headers={"Content-Type": "application/json"},
+              )
+              with urllib.request.urlopen(request, timeout=5) as response:
+                  return response.status, json.loads(response.read().decode())
+
+          wait_ok("http://127.0.0.1:8000/api/v1/health/ready")
+          wait_ok("http://127.0.0.1:4200/")
+
+          base = "http://127.0.0.1:4200/api/v1/incidents"
+          started_at = (datetime.now(UTC) - timedelta(minutes=5)).isoformat()
+          status, created = request_json(
+              base,
+              method="POST",
+              payload={
+                  "title": "Sprint 2 smoke incident",
+                  "affected_resource": "DEMO-S2-EDGE-01",
+                  "severity": "HIGH",
+                  "impact_type": "OUTAGE",
+                  "symptoms": "Synthetic incident for Sprint 2 full-stack validation.",
+                  "started_at": started_at,
+              },
+          )
+          assert status == 201
+          assert created["status"] == "OPEN"
+          incident_id = created["id"]
+
+          status, updated = request_json(
+              f"{base}/{incident_id}/updates",
+              method="POST",
+              payload={"message": "Operadora acionada; protocolo DEMO-S2."},
+          )
+          assert status == 200
+          assert updated["version"] == 2
+
+          status, timeline = request_json(f"{base}/{incident_id}/timeline")
+          assert status == 200
+          assert [event["event_type"] for event in timeline] == [
+              "INCIDENT_CREATED",
+              "INCIDENT_UPDATED",
+          ]
+          assert timeline[-1]["message"] == "Operadora acionada; protocolo DEMO-S2."
+
+          query = urlencode(
+              {
+                  "status": "OPEN",
+                  "severity": "HIGH",
+                  "page": 1,
+                  "page_size": 1,
+                  "sort": "updated_at",
+                  "order": "desc",
+              }
+          )
+          status, page = request_json(f"{base}/query?{query}")
+          assert status == 200
+          assert page["page"] == 1 and page["page_size"] == 1
+          assert page["total"] >= 1
+          assert page["items"][0]["id"] == incident_id
+
+          status, normalized = request_json(
+              f"{base}/{incident_id}/normalize",
+              method="POST",
+              payload={"note": "Conectividade restabelecida e validada."},
+          )
+          assert status == 200
+          assert normalized["status"] == "RESOLVED"
+          assert normalized["version"] == 3
+
+          status, timeline = request_json(f"{base}/{incident_id}/timeline")
+          assert status == 200
+          assert [event["event_type"] for event in timeline] == [
+              "INCIDENT_CREATED",
+              "INCIDENT_UPDATED",
+              "INCIDENT_NORMALIZED",
+          ]
+
+          try:
+              request_json(
+                  f"{base}/{incident_id}/normalize",
+                  method="POST",
+                  payload={},
+              )
+          except urllib.error.HTTPError as error:
+              assert error.code == 409
+          else:
+              raise AssertionError("Second normalization must be rejected")
+
+          try:
+              request_json(
+                  f"{base}/{incident_id}/updates",
+                  method="POST",
+                  payload={"message": "Invalid post-resolution update."},
+              )
+          except urllib.error.HTTPError as error:
+              assert error.code == 409
+          else:
+              raise AssertionError("Resolved incident update must be rejected")
+
+          query = urlencode({"status": "RESOLVED", "severity": "HIGH"})
+          status, resolved_page = request_json(f"{base}/query?{query}")
+          assert status == 200
+          assert any(item["id"] == incident_id for item in resolved_page["items"])
+
+          print("Sprint 2 functional smoke OK", incident_id)
+          PY
+
+      - name: Show container status on failure
+        if: failure()
+        run: docker compose ps && docker compose logs --no-color
+
+      - name: Stop stack
+        if: always()
+        run: docker compose down -v

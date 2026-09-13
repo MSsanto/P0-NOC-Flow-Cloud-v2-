@@ -4,6 +4,7 @@ from app.api.v1.router import api_v1_router
 from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.core.middleware import register_middleware
+from app.modules.incidents.query_api import router as incident_query_router
 
 API_V1_PREFIX = "/api/v1"
 
@@ -19,6 +20,7 @@ def create_app() -> FastAPI:
     )
     register_middleware(app)
     register_exception_handlers(app)
+    app.include_router(incident_query_router, prefix=API_V1_PREFIX)
     app.include_router(api_v1_router, prefix=API_V1_PREFIX)
     return app
 

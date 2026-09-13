@@ -33,11 +33,11 @@ def client() -> TestClient:
     return TestClient(app)
 
 
-def _payload(*, minutes_ago: int = 1) -> dict[str, object]:
+def _payload(*, minutes_ago: int = 1, severity: str = "HIGH") -> dict[str, object]:
     return {
         "title": "WAN indisponível",
         "affected_resource": "WAN Loja 001",
-        "severity": "HIGH",
+        "severity": severity,
         "impact_type": "OUTAGE",
         "symptoms": "Conectividade indisponível para a unidade.",
         "started_at": (datetime.now(UTC) - timedelta(minutes=minutes_ago)).isoformat(),
@@ -141,6 +141,86 @@ def test_list_orders_newest_incident_first(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert [item["id"] for item in response.json()] == [newer["id"], older["id"]]
+
+
+def test_query_filters_paginates_and_sorts(client: TestClient) -> None:
+    older = client.post(
+        "/api/v1/incidents",
+        json=_payload(minutes_ago=30, severity="HIGH"),
+    ).json()
+    client.post(
+        "/api/v1/incidents",
+        json=_payload(minutes_ago=20, severity="LOW"),
+    )
+    newer = client.post(
+        "/api/v1/incidents",
+        json=_payload(minutes_ago=10, severity="HIGH"),
+    ).json()
+
+    normalize = client.post(
+        f"/api/v1/incidents/{older['id']}/normalize",
+        json={"note": "Serviço restabelecido."},
+    )
+    assert normalize.status_code == 200
+
+    first_page = client.get(
+        "/api/v1/incidents/query",
+        params={
+            "severity": "HIGH",
+            "page": 1,
+            "page_size": 1,
+            "sort": "started_at",
+            "order": "desc",
+        },
+    )
+    assert first_page.status_code == 200
+    payload = first_page.json()
+    assert payload["total"] == 2
+    assert payload["page"] == 1
+    assert payload["page_size"] == 1
+    assert [item["id"] for item in payload["items"]] == [newer["id"]]
+
+    second_page = client.get(
+        "/api/v1/incidents/query",
+        params={"severity": "HIGH", "page": 2, "page_size": 1},
+    )
+    assert second_page.status_code == 200
+    assert [item["id"] for item in second_page.json()["items"]] == [older["id"]]
+
+    resolved = client.get(
+        "/api/v1/incidents/query",
+        params={"status": "RESOLVED"},
+    )
+    assert resolved.status_code == 200
+    assert [item["id"] for item in resolved.json()["items"]] == [older["id"]]
+
+    updated_desc = client.get(
+        "/api/v1/incidents/query",
+        params={"sort": "updated_at", "order": "desc"},
+    )
+    assert updated_desc.status_code == 200
+    assert updated_desc.json()["items"][0]["id"] == older["id"]
+
+
+def test_query_validates_period_and_parameters(client: TestClient) -> None:
+    now = datetime.now(UTC)
+    invalid_period = client.get(
+        "/api/v1/incidents/query",
+        params={
+            "started_from": now.isoformat(),
+            "started_to": (now - timedelta(hours=1)).isoformat(),
+        },
+    )
+    assert invalid_period.status_code == 422
+
+    invalid_page = client.get("/api/v1/incidents/query", params={"page": 0})
+    assert invalid_page.status_code == 422
+
+    invalid_size = client.get("/api/v1/incidents/query", params={"page_size": 101})
+    assert invalid_size.status_code == 422
+
+    invalid_sort = client.get("/api/v1/incidents/query", params={"sort": "title"})
+    assert invalid_sort.status_code == 422
 
 
 def test_create_rejects_future_start_and_authority_fields(client: TestClient) -> None:
