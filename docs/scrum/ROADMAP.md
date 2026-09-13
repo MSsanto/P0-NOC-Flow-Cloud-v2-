@@ -147,9 +147,26 @@ Entregas candidatas:
 
 Documento de refinamento: [`../integrations/MONITORING-NOTIFICATIONS.md`](../integrations/MONITORING-NOTIFICATIONS.md).
 
+## Pós-v1.0 — ITSM Integration
+
+Refinamento dos itens P4-005 e P4-006 do Product Backlog.
+
+Objetivo: sincronizar incidentes do NOC Flow com gestores externos de incidentes sem acoplamento ao fornecedor.
+
+Entregas candidatas:
+- contrato `ITSMProvider` e `MockProvider`;
+- persistência da correlação entre incidente interno e protocolo externo;
+- criação idempotente de ticket externo;
+- atualização e normalização sincronizadas quando suportadas;
+- adapter Plusoft condicionado ao contrato real disponibilizado pela instância;
+- GLPI ou Zammad como adapter de laboratório/demo;
+- ServiceNow e Jira Service Management como adapters futuros opcionais;
+- retry, rastreabilidade e política de conflitos de status.
+
+Documento de refinamento: [`../integrations/ITSM-INTEGRATION.md`](../integrations/ITSM-INTEGRATION.md).
+
 ## Outros itens pós-v1.0
 
-- ServiceNow/ITSM;
 - integrações automáticas com operadoras;
 - analytics avançado;
 - SLA configurável;
