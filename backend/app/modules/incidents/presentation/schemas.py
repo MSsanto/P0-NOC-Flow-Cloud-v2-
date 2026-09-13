@@ -50,6 +50,15 @@ class IncidentResponse(BaseModel):
     version: int
 
 
+class IncidentListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[IncidentResponse]
+    page: int
+    page_size: int
+    total: int
+
+
 class IncidentEventResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
