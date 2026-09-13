@@ -7,6 +7,10 @@ export type IncidentStatus =
   | 'MONITORING'
   | 'RESOLVED'
   | 'CLOSED';
+export type IncidentEventType =
+  | 'INCIDENT_CREATED'
+  | 'INCIDENT_UPDATED'
+  | 'INCIDENT_NORMALIZED';
 
 export interface Incident {
   readonly id: string;
@@ -22,6 +26,15 @@ export interface Incident {
   readonly version: number;
 }
 
+export interface IncidentEvent {
+  readonly id: string;
+  readonly incident_id: string;
+  readonly event_type: IncidentEventType;
+  readonly message: string | null;
+  readonly actor_subject: string;
+  readonly occurred_at: string;
+}
+
 export interface IncidentCreateRequest {
   readonly title: string;
   readonly affected_resource: string;
@@ -29,4 +42,12 @@ export interface IncidentCreateRequest {
   readonly impact_type: IncidentImpactType;
   readonly symptoms: string;
   readonly started_at: string;
+}
+
+export interface IncidentUpdateRequest {
+  readonly message: string;
+}
+
+export interface IncidentNormalizeRequest {
+  readonly note?: string;
 }
