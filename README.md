@@ -2,25 +2,28 @@
 
 > Plataforma web de portfólio para o ciclo operacional de incidentes em NOC, construída com Angular, FastAPI, PostgreSQL, Docker e GitHub Actions.
 
-**Status:** 🟢 Sprint 1 — Fundação Executável concluída tecnicamente  
-**Release candidata:** `v0.1.0-alpha`  
+**Status:** 🟢 Sprint 2 — Incidentes & Timeline concluída tecnicamente  
+**Release candidata:** `v0.2.0-alpha`  
 **Autor:** Matheus Santo  
 **Repositório:** `MSsanto/P0-NOC-Flow-Cloud-v2-`
 
-## O que funciona na Sprint 1
+## O que funciona
 
-O primeiro vertical slice executável permite:
+O produto já permite:
 
-- listar incidentes do tenant/contexto atual;
-- registrar novo incidente com validação frontend e backend;
-- visualizar o detalhe do incidente por ID;
-- persistir dados em PostgreSQL;
-- executar migrations com Alembic;
-- consumir a API FastAPI pelo Angular;
+- listar, criar e visualizar incidentes tenant-scoped;
+- registrar atualizações operacionais em incidentes ativos;
+- normalizar incidentes com confirmação explícita;
+- bloquear atualização após `RESOLVED/CLOSED` e dupla normalização;
+- visualizar timeline append-only com tipo, ator, data/hora e mensagem;
+- filtrar incidentes por status, severidade e período;
+- ordenar por início ou última atualização, crescente/decrescente;
+- paginar resultados pela consulta avançada;
+- persistir dados em PostgreSQL e executar migrations Alembic;
 - executar frontend, backend e banco via Docker Compose;
-- validar type-check/lint, testes, build, dependency audits e smoke funcional no GitHub Actions.
+- validar lint/type-check, testes, builds, audits e smoke full-stack no GitHub Actions.
 
-O contexto de identidade da Sprint 1 é **somente demo em `development`/`test`**. Deploy público/produção permanece fora do escopo até autenticação e autorização reais.
+A identidade continua **somente demo em `development`/`test`**. Deploy público/produção permanece bloqueado até autenticação e autorização reais.
 
 ## Stack executável
 
@@ -38,8 +41,6 @@ O contexto de identidade da Sprint 1 é **somente demo em `development`/`test`**
 
 ## Executar com Docker
 
-Requisito: Docker com Compose.
-
 ```bash
 git clone https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-.git
 cd P0-NOC-Flow-Cloud-v2-
@@ -55,7 +56,7 @@ Acesse:
 - Readiness: `http://localhost:8000/api/v1/health/ready`
 - PostgreSQL: `localhost:5432`
 
-Para encerrar:
+Para encerrar e remover os dados de teste:
 
 ```bash
 docker compose down -v
@@ -93,56 +94,95 @@ O pipeline principal executa:
 detect
 ├─ backend: install → Ruff → Alembic/PostgreSQL → pytest → pip-audit → readiness
 ├─ frontend: npm ci → type-check → testes → production build → npm audit
-└─ compose-smoke: build stack → functional smoke → cleanup
+└─ compose-smoke: build stack → regressão Sprint 1 → cleanup
 ```
 
-O smoke funcional percorre Nginx → FastAPI → PostgreSQL e valida a jornada **criar → listar → detalhar**, além de caso negativo para campo de autoridade `tenant_id`.
+A Sprint 2 acrescenta um segundo gate funcional:
+
+```text
+Sprint 2 Functional Smoke
+criar → atualizar → timeline → filtrar/paginar → normalizar
+→ timeline → rejeitar dupla normalização → rejeitar update pós-resolução
+```
+
+Os smokes atravessam **Nginx → FastAPI → PostgreSQL**.
 
 Comandos locais úteis:
 
 ```bash
-# backend
 cd backend
 ruff check .
 pytest
 
-# frontend
-cd apps/web
+cd ../apps/web
 npm run lint
 npm test
 npm run build
 ```
 
-## API da Sprint 1
+## API implementada
 
 ```text
 GET  /api/v1/incidents
 POST /api/v1/incidents
+GET  /api/v1/incidents/query
 GET  /api/v1/incidents/{incident_id}
+POST /api/v1/incidents/{incident_id}/updates
+POST /api/v1/incidents/{incident_id}/normalize
+GET  /api/v1/incidents/{incident_id}/timeline
 GET  /api/v1/health/live
 GET  /api/v1/health/ready
 ```
 
-Exemplo de criação:
+`GET /api/v1/incidents` permanece retrocompatível com a listagem simples. A consulta avançada usa `GET /api/v1/incidents/query` e aceita:
+
+```text
+status
+severity
+started_from
+started_to
+page
+page_size (1..100)
+sort=started_at|updated_at
+order=asc|desc
+```
+
+Resposta da consulta avançada:
 
 ```json
 {
-  "title": "WAN indisponível",
-  "affected_resource": "DEMO-SJC-EDGE-01",
-  "severity": "HIGH",
-  "impact_type": "OUTAGE",
-  "symptoms": "Conectividade indisponível para a unidade de demonstração.",
-  "started_at": "2026-09-10T12:00:00Z"
+  "items": [],
+  "page": 1,
+  "page_size": 25,
+  "total": 0
 }
 ```
 
-`tenant_id`, autor, ID, timestamps e status inicial são autoridade do servidor e não são aceitos como campos do body de criação.
+Atualização operacional:
+
+```json
+{
+  "message": "Operadora acionada; protocolo DEMO-123."
+}
+```
+
+Normalização:
+
+```json
+{
+  "note": "Conectividade restabelecida e validada."
+}
+```
+
+`tenant_id`, ator, ID e timestamps são autoridade do servidor. O cliente não os envia como autoridade dos comandos.
 
 ## Segurança da alpha
 
-A Sprint 1 inclui tenant scoping server-side, Pydantic/constraints, CORS allowlist, Problem Details, container backend não-root, headers de segurança no Nginx e audits de dependências no CI.
+A alpha inclui tenant scoping server-side, Pydantic/constraints, SQLAlchemy parametrizado, CORS allowlist, Problem Details, backend não-root, headers de segurança no Nginx e audits de dependências no CI.
 
-A `v0.1.0-alpha` é homologável **somente como ambiente local/teste**. OIDC, RBAC e identidade confiável serão implementados em incremento posterior; por isso produção permanece bloqueada por design.
+A timeline é append-only no fluxo suportado e as ações validam o estado do incidente. Recursos fora do tenant ativo não são expostos pela API suportada.
+
+A `v0.2.0-alpha` é homologável **somente como ambiente local/teste**. OIDC, RBAC e identidade confiável pertencem ao incremento posterior; produção permanece bloqueada por design.
 
 ## Arquitetura resumida
 
@@ -151,6 +191,7 @@ flowchart LR
     U[Analista NOC] --> WEB[Angular / Nginx]
     WEB -->|/api/v1| API[FastAPI]
     API --> DB[(PostgreSQL)]
+    API --> EVT[(Incident Events)]
     CI[GitHub Actions] --> WEB
     CI --> API
     CI --> DB
@@ -175,9 +216,10 @@ A documentação completa está em [`docs/INDEX.md`](docs/INDEX.md).
 
 Destaques:
 
-- [Sprint 1 — evidências](docs/sprints/SPRINT_01.md)
-- [Roteiro de homologação da v0.1.0-alpha](docs/releases/V0.1.0-ALPHA-HOMOLOGATION.md)
-- [Contrato da API](docs/06-API-CONTRACT.md)
+- [Sprint 2 — evidências](docs/sprints/SPRINT_02.md)
+- [Roteiro de homologação da v0.2.0-alpha](docs/releases/V0.2.0-ALPHA-HOMOLOGATION.md)
+- [Contrato executado de incidentes na Sprint 2](docs/api/SPRINT_02-INCIDENTS.md)
+- [Contrato geral da API](docs/06-API-CONTRACT.md)
 - [Arquitetura](docs/03-ARCHITECTURE.md)
 - [Modelo de dados](docs/05-DATA-MODEL.md)
 - [Segurança](docs/08-SECURITY-PRIVACY.md)
@@ -186,11 +228,14 @@ Destaques:
 
 ## Roadmap
 
-- **Sprint 2:** atualizações, normalização, timeline e filtros de incidentes;
+- **Sprint 1:** fundação executável e CRUD inicial de incidentes — concluída;
+- **Sprint 2:** atualizações, normalização, timeline e filtros — concluída tecnicamente;
 - **Sprint 3:** autenticação, RBAC e multi-tenancy confiável;
 - **Sprint 4:** dashboard e passagem de turno;
 - **Sprint 5:** auditoria e observabilidade;
 - **Sprint 6:** Azure e release v1.0.
+
+Integrações com monitoramento/notificações (Zabbix + WhatsApp/Evolution) e ITSM (Plusoft/GLPI/Zammad) permanecem no backlog de evolução e não fazem parte da alpha atual.
 
 ## Segurança e dados públicos
 
