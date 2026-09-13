@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from app.modules.incidents.application.ports import IncidentRepository
+from app.modules.incidents.application.queries import IncidentListQuery, IncidentPage
 from app.modules.incidents.domain.entities import (
     Incident,
     IncidentEvent,
@@ -33,8 +34,8 @@ class IncidentService:
     def __init__(self, repository: IncidentRepository) -> None:
         self.repository = repository
 
-    def list_incidents(self, tenant_id: UUID) -> list[Incident]:
-        return self.repository.list_for_tenant(tenant_id)
+    def list_incidents(self, tenant_id: UUID, query: IncidentListQuery) -> IncidentPage:
+        return self.repository.list_for_tenant(tenant_id, query)
 
     def get_incident(self, tenant_id: UUID, incident_id: UUID) -> Incident | None:
         return self.repository.get_for_tenant(tenant_id, incident_id)
