@@ -1,87 +1,127 @@
 # Sprint 002 — Incidentes & Timeline
 
-**Status:** Planejamento futuro  
-**Duração planejada:** 2 semanas  
-**Release alvo:** `v0.2.0-alpha`  
-**Sprint Goal:** completar o ciclo operacional ALERTA → ATUALIZAÇÃO → NORMALIZAÇÃO com timeline rastreável.
+**Status:** Concluída tecnicamente  
+**Consolidação:** 2026-09-13  
+**Release candidata:** `v0.2.0-alpha`  
+**Sprint Goal:** completar o ciclo operacional ALERTA → ATUALIZAÇÃO → NORMALIZAÇÃO com timeline rastreável e mecanismos de priorização da lista.
 
 ## User Stories
 
-### US-004 — Atualizar incidente [P0]
+### US-004 — Atualizar incidente [P0] — CONCLUÍDA
 Como operador NOC, quero registrar atualizações em um incidente ativo para manter a operação informada sobre sua evolução.
 
-**Responsável primário:** 05 Backend & API  
-**Dependências:** UX, domínio Incident, timeline, FE.
+Entregue:
+- endpoint `POST /api/v1/incidents/{incident_id}/updates`;
+- `message` validada e persistida como evento append-only;
+- ator e timestamp derivados pelo backend;
+- versão do incidente incrementada;
+- atualização bloqueada após `RESOLVED/CLOSED`;
+- UI de atualização preservando o contexto do detalhe.
 
-**Aceite:** atualização persistida; autor/data-hora registrados; incidente inexistente ou normalizado tratado; API documentada; UI atualizada sem perder contexto.
-
-### US-005 — Normalizar incidente [P0]
+### US-005 — Normalizar incidente [P0] — CONCLUÍDA
 Como operador NOC, quero normalizar um incidente quando o serviço for restabelecido para registrar corretamente seu encerramento operacional.
 
-**Responsável primário:** 05 Backend & API
+Entregue:
+- endpoint `POST /api/v1/incidents/{incident_id}/normalize`;
+- transição para `RESOLVED`;
+- observação opcional;
+- evento append-only com ator/timestamp;
+- segunda normalização bloqueada com `409`;
+- confirmação explícita no frontend.
 
-**Aceite:** transição válida; data/hora e autor; evento na timeline; dupla normalização impedida; confirmação UX para ação crítica.
-
-### US-006 — Visualizar timeline [P0]
+### US-006 — Visualizar timeline [P0] — CONCLUÍDA
 Como operador NOC, quero visualizar a sequência cronológica de eventos para entender rapidamente o histórico do incidente.
 
-**Responsável primário:** 04 Frontend
+Entregue:
+- `GET /api/v1/incidents/{incident_id}/timeline`;
+- eventos ordenados cronologicamente;
+- tipos `INCIDENT_CREATED`, `INCIDENT_UPDATED` e `INCIDENT_NORMALIZED`;
+- ator, data/hora e mensagem;
+- estados de loading, erro e vazio no frontend;
+- `incident_events` persistida de modo append-only no fluxo suportado.
 
-**Aceite:** eventos ordenados; tipo/autor/data-hora; carregamento/erro/vazio; timeline append-only no backend.
-
-### US-007 — Filtrar e ordenar incidentes [P1]
+### US-007 — Filtrar e ordenar incidentes [P1] — CONCLUÍDA
 Como operador NOC, quero filtrar e ordenar incidentes para priorizar rapidamente os casos relevantes.
 
-**Responsável primário:** 04 Frontend
+Entregue:
+- `GET /api/v1/incidents/query`;
+- filtros por status, severidade e período de início;
+- `page` e `page_size` com limite de 1–100 itens;
+- ordenação por `started_at` ou `updated_at`, `asc|desc`;
+- resposta `{items, page, page_size, total}`;
+- validação server-side de enum, limites e período;
+- filtros, ordenação e navegação anterior/próxima no Angular;
+- `GET /api/v1/incidents` legado preservado.
 
-**Aceite:** filtros por status/severidade/período; paginação; ordenação; parâmetros validados na API.
+## Decisões de implementação
 
-## Distribuição por especialistas
+- O incidente representa o estado corrente; `IncidentEvent` registra a trilha operacional append-only.
+- A normalização da Sprint 2 usa `RESOLVED`; `CLOSED` permanece estado previsto para evolução posterior.
+- A consulta avançada foi adicionada em `/incidents/query` para preservar o contrato simples de `/incidents`.
+- Tenant e ator permanecem autoridade server-side.
+- A identidade demo continua restrita a `development/test`; OIDC/RBAC não fazem parte desta Sprint.
 
-- **01 PO:** regras de transição, normalização e estados permitidos.
-- **02 Architecture:** domínio de timeline/eventos e contratos.
-- **03 UX/UI:** timeline, confirmações, severidade e feedback.
-- **04 Frontend:** telas de atualização/normalização/timeline/filtros.
-- **05 Backend:** endpoints, regras e services.
-- **06 Database:** IncidentEvent/timeline, índices e constraints.
-- **07 QA:** happy path e negativos de transição.
-- **08 DevOps:** manter CI e ambiente reproduzível.
-- **09 Security:** autorização por ação e proteção contra mass assignment/IDOR.
-- **10 Docs:** OpenAPI, docs de domínio e Sprint.
-- **11 Review:** review independente.
-- **12 Release:** homologação `v0.2.0-alpha`.
+## Evidências
 
-## Tasks principais
+- PR #35 — backend de atualização, normalização e timeline; CI #50 (`34773862892`) verde após correção de ordenação de flush SQLAlchemy.
+- PR #36 — frontend de atualização, confirmação de normalização e timeline; CI #52 (`34774195132`) verde.
+- PR #37 — filtros, paginação e ordenação; CI #58 (`34775498607`) verde e Frontend Foundation #23 (`34775498603`) verde.
+- Sprint 2 Functional Smoke #4 (`34775498602`) verde no head final do PR #37.
+- Merge da US-007 na `main`: `805dde4239c162d21d3fe89644e396476633d319`.
 
-- TASK-PO-S2-01 fechar state machine do incidente;
-- TASK-ARC-S2-01 contrato IncidentEvent;
-- TASK-UX-S2-01 fluxo atualização/normalização/timeline;
-- TASK-DB-S2-01 tabela/event store append-only equivalente;
-- TASK-BE-S2-01 POST updates;
-- TASK-BE-S2-02 POST normalize;
-- TASK-BE-S2-03 GET timeline;
-- TASK-BE-S2-04 filtros/paginação/ordenação;
-- TASK-FE-S2-01 atualização;
-- TASK-FE-S2-02 normalização;
-- TASK-FE-S2-03 timeline;
-- TASK-FE-S2-04 filtros/paginação;
-- TASK-QA-S2-01 fluxo criar→atualizar→normalizar;
-- TASK-QA-S2-02 atualizar normalizado/normalizar duas vezes/404/payload inválido;
-- TASK-SEC-S2-01 revisão de autorização e IDOR;
-- TASK-DOC-S2-01 documentação;
-- TASK-CR-S2-01 review;
-- TASK-REL-S2-01 homologação.
+## QA e regressão
 
-## Dependências críticas
+Cobertura relevante:
+- criar → atualizar → timeline → normalizar;
+- timeline criada/atualizada/normalizada em ordem;
+- segunda normalização → `409`;
+- atualização pós-resolução → `409`;
+- payloads de ação com campos de autoridade forjados → `422`;
+- 404 para incidente/timeline inexistentes;
+- filtros por status/severidade;
+- paginação e total;
+- ordenação por início/última atualização;
+- parâmetros de query inválidos → `422`;
+- período invertido bloqueado no frontend e backend;
+- regressão da jornada Sprint 1 preservada.
 
-Sprint 1 homologada; state machine aprovada pelo PO; modelo de eventos aprovado por Architecture/Database.
+## Segurança / AppSec
 
-## Critérios de sucesso
+Para o escopo local/teste:
+- consultas, detalhe, eventos e comandos usam tenant do contexto server-side;
+- `tenant_id` e `actor_subject` não são autoridade do body;
+- queries SQLAlchemy são parametrizadas;
+- transições inválidas são verificadas no service;
+- timeline não possui endpoint de edição/remoção;
+- dependency audits continuam no CI;
+- nenhuma credencial ou dado operacional real foi introduzido.
 
-- ciclo completo executável pela UI;
-- timeline consistente e append-only;
-- transições inválidas bloqueadas;
-- filtros/paginação funcionais;
-- testes/regressão verdes;
-- sem BLOCKER ou vulnerabilidade Critical/High sem mitigação;
-- release homologada.
+Não há autorização para exposição pública/produção enquanto identidade confiável e RBAC não forem implementados.
+
+## Independent Code Review
+
+Durante o fechamento foi identificado e corrigido um problema de manutenibilidade: a primeira versão da consulta avançada registrava a rota por efeito colateral de import. O código final registra o router explicitamente no app.
+
+Classificação final para o escopo suportado:
+- BLOCKER: 0 pendentes;
+- MAJOR: 0 pendentes;
+- Critical/High AppSec conhecido no escopo suportado: 0 aberto;
+- sugestões futuras não bloqueiam a alpha local/teste.
+
+## Definition of Done
+
+- US-004/005/006/007 implementadas;
+- migrations PostgreSQL válidas;
+- backend lint/test/audit/readiness verdes;
+- frontend type-check/test/build/audit verdes;
+- compose regression smoke verde;
+- Sprint 2 full-stack smoke verde;
+- revisão independente sem BLOCKER/MAJOR pendente;
+- documentação atualizada;
+- candidata homologável apenas em local/teste.
+
+## Release
+
+Roteiro manual: [`../releases/V0.2.0-ALPHA-HOMOLOGATION.md`](../releases/V0.2.0-ALPHA-HOMOLOGATION.md).
+
+Nenhuma tag, GitHub Release ou implantação Azure/produção é criada por este fechamento.

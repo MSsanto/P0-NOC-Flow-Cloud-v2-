@@ -2,115 +2,43 @@
 
 Base: `/api/v1`
 
-O OpenAPI gerado pelo FastAPI será fonte executável do contrato quando a implementação começar. Este documento define o desenho antes do código e registra as decisões canônicas já refinadas para a Sprint 1.
-
-## Versionamento
-
-- a versão principal faz parte da URL: `/api/v1`;
-- mudanças aditivas e retrocompatíveis permanecem em `v1`;
-- renomear/remover campos obrigatórios, mudar semântica de status ou alterar payload de forma incompatível exige nova versão principal ou migração explicitamente acordada;
-- endpoints em depreciação devem ser documentados no OpenAPI e mantidos durante uma janela definida quando houver consumidores ativos;
-- correções de bug que restauram o contrato documentado não criam nova versão;
-- o frontend deve consumir somente contratos publicados, sem depender de campos acidentais não documentados.
+O OpenAPI gerado pelo FastAPI é a fonte executável do contrato implementado. Este documento registra as convenções estáveis e o estado funcional alcançado até a Sprint 2.
 
 ## Convenções
 
-- JSON em UTF-8;
-- timestamps ISO-8601 UTC (`Z`);
-- paginação por cursor quando houver grande volume; offset pode ser usado inicialmente em cadastros pequenos;
-- erros no formato Problem Details compatível com RFC 9457;
-- `X-Request-ID` aceito/gerado e devolvido;
-- tenant ativo vem do contexto autorizado, nunca é aceito cegamente do body;
-- `Idempotency-Key` será exigida em endpoints de ingestão externa futura.
-
-## Contrato de erros
-
-Todo erro HTTP gerado pela aplicação deve possuir uma representação estável e não expor stack trace, SQL, tokens, secrets ou detalhes internos.
-
-Formato base:
-
-```json
-{
-  "type": "https://nocflow.example/problems/incident-state-conflict",
-  "title": "Incident state conflict",
-  "status": 409,
-  "detail": "The incident cannot transition from CLOSED to RESOLVED.",
-  "instance": "/api/v1/incidents/01J.../resolve",
-  "code": "INCIDENT_STATE_CONFLICT",
-  "request_id": "01J..."
-}
-```
-
-Campos:
-
-- `type`: identificador estável da classe do problema;
-- `title`: resumo legível e estável;
-- `status`: status HTTP;
-- `detail`: detalhe seguro para o consumidor;
-- `instance`: recurso/operação HTTP relacionada;
-- `code`: código de erro estável para tratamento programático;
-- `request_id`: correlação com logs e tracing.
-
-Erros de validação podem acrescentar:
-
-```json
-{
-  "errors": [
-    {
-      "field": "title",
-      "code": "REQUIRED",
-      "message": "Field is required."
-    }
-  ]
-}
-```
-
-A UI pode traduzir mensagens para o usuário, mas deve usar `code`/`errors[].code` para comportamento programático quando necessário.
+- JSON UTF-8;
+- API versionada na URL (`/api/v1`);
+- timestamps ISO-8601/UTC;
+- erros da aplicação em Problem Details;
+- `X-Request-ID` usado para correlação quando aplicável;
+- tenant e identidade do ator são autoridade server-side;
+- SQL é acessado via SQLAlchemy parametrizado;
+- mudanças incompatíveis exigem evolução explícita de contrato/versionamento.
 
 ## Health
 
-- `GET /health/live`
-- `GET /health/ready`
+```text
+GET /health/live
+GET /health/ready
+```
 
-## Sessão/contexto
+## Incidentes — endpoints implementados
 
-- `GET /me`
-- `GET /me/tenants`
-- `POST /me/active-tenant` — somente se adotarmos contexto persistido; alternativa preferida é tenant explícito em header/route validado.
+```text
+GET  /incidents
+POST /incidents
+GET  /incidents/query
+GET  /incidents/{incident_id}
+POST /incidents/{incident_id}/updates
+POST /incidents/{incident_id}/normalize
+GET  /incidents/{incident_id}/timeline
+```
 
-Na Sprint 1, antes da autenticação completa da Sprint 3, tenant e ator podem ser resolvidos por provider de desenvolvimento/demo explicitamente isolado, configurado pelo backend e usando somente dados sintéticos. O cliente não envia `tenant_id` nem identidade como autoridade do body.
+Endpoints de lifecycle adicionais previstos no roadmap (`acknowledge`, `monitor`, `close`, `reopen`) não devem ser considerados implementados até o incremento correspondente.
 
-## Base operacional
+## Criar incidente
 
-- `GET /sites`
-- `POST /sites`
-- `GET /sites/{site_id}`
-- `PATCH /sites/{site_id}`
-- `GET /sites/{site_id}/circuits`
-- `POST /circuits`
-- `PATCH /circuits/{circuit_id}`
-- `GET /carriers`
-- `POST /carriers`
-- `GET /severities`
-- `POST /severities`
-
-Os endpoints de base operacional fazem parte do modelo alvo e não são pré-requisito para o recorte mínimo de incidente da Sprint 1.
-
-## Incidentes
-
-- `GET /incidents`
-- `POST /incidents`
-- `GET /incidents/{incident_id}`
-- `POST /incidents/{incident_id}/acknowledge`
-- `POST /incidents/{incident_id}/updates`
-- `POST /incidents/{incident_id}/monitor`
-- `POST /incidents/{incident_id}/resolve`
-- `POST /incidents/{incident_id}/close`
-- `POST /incidents/{incident_id}/reopen`
-- `GET /incidents/{incident_id}/timeline`
-- `POST /incidents/{incident_id}/protocols`
-
-### Sprint 1 — contrato canônico de `POST /incidents`
+`POST /incidents`
 
 Request:
 
@@ -121,89 +49,143 @@ Request:
   "severity": "CRITICAL",
   "impact_type": "OUTAGE",
   "symptoms": "Perda total de conectividade observada no recurso monitorado.",
-  "started_at": "2026-09-08T12:30:00Z"
+  "started_at": "2026-09-13T12:30:00Z"
 }
 ```
 
 Regras:
-
-- `title`: string, 3–120 caracteres;
-- `affected_resource`: string, 2–120 caracteres;
+- `title`: 3–120 caracteres;
+- `affected_resource`: 2–120;
 - `severity`: `CRITICAL | HIGH | MEDIUM | LOW`;
 - `impact_type`: `OUTAGE | DEGRADATION`;
-- `symptoms`: string, 10–2000 caracteres;
-- `started_at`: ISO-8601 UTC; não pode ser posterior ao momento do registro;
-- `tenant_id`, ator, `id`, `status`, `created_at` e `updated_at` são definidos pelo backend/contexto e não são aceitos como autoridade do body;
+- `symptoms`: 10–2000;
+- `started_at`: não pode estar no futuro;
+- `tenant_id`, ator, ID, status e timestamps são definidos pelo servidor;
 - status inicial: `OPEN`;
-- request inválido não pode criar registro parcial.
+- sucesso: `201`.
 
-Resposta de sucesso: `201 Created` com o incidente persistido, incluindo no mínimo `id`, os campos recebidos, `status`, `created_at` e `updated_at`.
+## Listagem simples
 
-Para a Sprint 1, validação estrutural/campos inválidos usa `422` no formato Problem Details adotado pela aplicação. Malformação de JSON/requisição pode usar `400`.
+`GET /incidents`
 
-`site_id`, `severity_id`, `source` e a base operacional configurável permanecem no modelo alvo e serão introduzidos por evolução explícita de contrato/migration, não como campos ocultos da US-002.
+Mantido retrocompatível com a Sprint 1 e retorna um array simples do tenant ativo.
 
-### Exemplo conceitual — atualização
+## Consulta avançada
+
+`GET /incidents/query`
+
+Parâmetros:
+
+```text
+status        opcional; enum de IncidentStatus
+severity      opcional; CRITICAL|HIGH|MEDIUM|LOW
+started_from  opcional; datetime ISO-8601
+started_to    opcional; datetime ISO-8601
+page          >= 1; padrão 1
+page_size     1..100; padrão 25
+sort          started_at|updated_at; padrão started_at
+order         asc|desc; padrão desc
+```
+
+`started_from` não pode ser posterior a `started_to`.
+
+Resposta:
 
 ```json
 {
-  "occurred_at": "2026-09-08T12:45:00Z",
-  "situation": "Circuito permanece indisponível",
-  "action_taken": "Chamado aberto com operadora",
-  "next_action": "Aguardar diagnóstico da operadora"
+  "items": [],
+  "page": 1,
+  "page_size": 25,
+  "total": 0
 }
 ```
 
-### Exemplo conceitual — resolução
+## Detalhe
+
+`GET /incidents/{incident_id}`
+
+Retorna somente recurso pertencente ao tenant ativo; recurso fora do contexto autorizado é tratado como não encontrado no fluxo suportado.
+
+## Atualização operacional
+
+`POST /incidents/{incident_id}/updates`
 
 ```json
 {
-  "resolved_at": "2026-09-08T13:20:00Z",
-  "resolution": "Conectividade restabelecida e validada",
-  "corrective_action": "Energia elétrica restabelecida na localidade"
+  "message": "Operadora acionada; protocolo DEMO-123."
 }
 ```
 
-## Templates/comunicação
+Regras:
+- `message`: 3–2000 caracteres;
+- ator/timestamp definidos server-side;
+- sucesso grava `INCIDENT_UPDATED` e incrementa `version`;
+- `RESOLVED`/`CLOSED` rejeitam update com `409`;
+- incidente inexistente no tenant ativo retorna `404`;
+- campos extras/autoridade forjada retornam `422`.
 
-- `GET /templates`
-- `POST /templates`
-- `POST /templates/{template_id}/versions`
-- `POST /incidents/{incident_id}/communications/render`
-- `GET /incidents/{incident_id}/communications`
+## Normalização
 
-Renderizar não envia comunicação. Envio externo é P4 e sempre terá política explícita.
+`POST /incidents/{incident_id}/normalize`
 
-## Passagem de turno
+```json
+{
+  "note": "Conectividade restabelecida e validada."
+}
+```
 
-- `POST /handovers/preview`
-- `POST /handovers`
-- `GET /handovers`
-- `GET /handovers/{handover_id}`
-- `POST /handovers/{handover_id}/finalize`
+`note` é opcional; se fornecida, 3–2000 caracteres.
 
-## Auditoria
+Regras:
+- estado final da operação da Sprint 2: `RESOLVED`;
+- grava `INCIDENT_NORMALIZED` e incrementa `version`;
+- segunda normalização ou incidente já encerrado retorna `409`;
+- ator/timestamp são server-side.
 
-- `GET /audit-events` — restrito a papéis autorizados.
+## Timeline
 
-## Filtros principais de incidentes
+`GET /incidents/{incident_id}/timeline`
 
-`status`, `severity`, `site`, `carrier`, `protocol`, `detected_from`, `detected_to`, `query`, `cursor`, `limit`.
+Eventos retornados em ordem cronológica:
 
-Filtros que dependem de `site`, `carrier` e demais entidades de base operacional entram somente quando essas entidades existirem no incremento correspondente. A Sprint 1 deve implementar apenas os filtros aprovados em suas histórias.
+```text
+INCIDENT_CREATED
+INCIDENT_UPDATED
+INCIDENT_NORMALIZED
+```
 
-## Códigos esperados
+Shape:
 
-- `200/201/204`: sucesso;
-- `400`: contrato inválido/requisição malformada quando aplicável;
-- `401`: não autenticado;
-- `403`: sem autorização no tenant/recurso;
+```json
+{
+  "id": "uuid",
+  "incident_id": "uuid",
+  "event_type": "INCIDENT_UPDATED",
+  "message": "Operadora acionada.",
+  "actor_subject": "demo-operator",
+  "occurred_at": "2026-09-13T15:00:00Z"
+}
+```
+
+A API da Sprint 2 não oferece alteração ou exclusão de eventos da timeline.
+
+## Erros principais
+
+- `200/201`: sucesso;
+- `400`: requisição malformada quando aplicável;
+- `401`: reservado para autenticação real futura;
+- `403`: reservado para autorização/RBAC real futura;
 - `404`: recurso inexistente no contexto autorizado;
-- `409`: conflito de estado/versão/duplicidade;
-- `422`: validação semântica/estrutural da entrada conforme contrato FastAPI;
-- `429`: rate limit futuro;
-- `500`: erro inesperado com request ID.
+- `409`: conflito de lifecycle;
+- `422`: validação estrutural/semântica;
+- `500`: erro inesperado, sem exposição de stack/SQL/secrets.
 
-## Regra de segurança
+## Segurança e identidade da alpha
 
-Para reduzir enumeração cross-tenant, recursos que existem em outro tenant devem ser tratados como não encontrados para usuários sem acesso, salvo necessidade administrativa explicitamente autorizada.
+Na Sprint 2, tenant e ator são resolvidos por contexto server-side. O provider demo só é suportado em `development/test`. O cliente não controla `tenant_id` ou `actor_subject` por body.
+
+OIDC/RBAC, identidade confiável e exposição pública pertencem a incremento posterior. A `v0.2.0-alpha` não é aprovada para produção.
+
+## Contrato detalhado do incremento
+
+Exemplos adicionais e parâmetros da Sprint 2: [`api/SPRINT_02-INCIDENTS.md`](api/SPRINT_02-INCIDENTS.md).

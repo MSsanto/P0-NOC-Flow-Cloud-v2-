@@ -2,35 +2,29 @@
 
 ## Objetivo
 
-Definir o modelo de dados do NOC Flow Cloud v2 com foco em integridade, isolamento por tenant, rastreabilidade, migrations reproduzíveis e evolução compatível com o roadmap.
+Definir o modelo físico vigente do NOC Flow Cloud v2 com foco em integridade, isolamento por tenant, rastreabilidade, migrations reproduzíveis e evolução compatível com o roadmap.
 
-A Sprint 1 usa um recorte mínimo e executável do domínio. Entidades futuras permanecem documentadas, mas não devem ser antecipadas no schema sem necessidade da sprint.
+**Estado atual:** Sprint 2 concluída tecnicamente. O schema executável possui `tenants`, `incidents` e `incident_events`.
 
 ## Decisões vigentes
 
-- SGBD: PostgreSQL.
-- Estratégia multi-tenant: banco compartilhado e schema compartilhado.
-- `tenant_id` é obrigatório em tabelas de negócio.
-- Timestamps persistidos como `timestamptz` em UTC.
-- Exclusão física de tenant com dados operacionais deve ser bloqueada por FK (`ON DELETE RESTRICT`).
-- Incidentes não usam soft delete na Sprint 1; histórico operacional não deve desaparecer silenciosamente.
-- Valores de domínio de baixa cardinalidade serão persistidos como `varchar` + `CHECK` na fase inicial. Isso evita o acoplamento de migrations a PostgreSQL ENUM durante a evolução rápida do domínio.
-- Identificadores públicos usam tipo `uuid`. A geração definitiva no banco ou na aplicação depende da ADR de implementação da arquitetura; o schema não depende de uma extensão PostgreSQL específica.
+- SGBD: PostgreSQL 17.
+- ORM: SQLAlchemy; migrations: Alembic.
+- Estratégia multi-tenant: banco e schema compartilhados, `tenant_id` obrigatório nas tabelas operacionais.
+- Timestamps persistidos em UTC (`timestamptz`).
+- Dados operacionais usam UUID.
+- Valores de domínio de baixa cardinalidade usam `varchar` + constraints/checks quando aplicável.
+- O incidente representa o estado corrente; `incident_events` representa a trilha cronológica operacional.
+- A timeline é append-only no fluxo suportado: não existe endpoint de update/delete de evento.
+- Dados públicos/de portfólio devem ser exclusivamente sintéticos.
 
-## Sprint 1 — escopo físico
-
-Entidades obrigatórias:
-
-1. `tenants`;
-2. `incidents`.
-
-O objetivo é suportar US-001, US-002 e US-003 sem antecipar `users`, `memberships`, `sites`, `severities` configuráveis, timeline ou auditoria completa.
-
-### ER — Sprint 1
+## ER — estado após Sprint 2
 
 ```mermaid
 erDiagram
     TENANT ||--o{ INCIDENT : owns
+    TENANT ||--o{ INCIDENT_EVENT : owns
+    INCIDENT ||--o{ INCIDENT_EVENT : contains
 
     TENANT {
         uuid id PK
@@ -57,132 +51,130 @@ erDiagram
         timestamptz updated_at
         integer version
     }
+
+    INCIDENT_EVENT {
+        uuid id PK
+        uuid tenant_id FK
+        uuid incident_id FK
+        varchar event_type
+        text message
+        varchar actor_subject
+        timestamptz occurred_at
+    }
 ```
 
 ## `tenants`
 
-| Campo | Tipo | Null | Regra |
-|---|---|---:|---|
-| `id` | `uuid` | não | PK |
-| `slug` | `varchar(64)` | não | unique; 2–64 caracteres |
-| `name` | `varchar(120)` | não | 2–120 caracteres |
-| `timezone` | `varchar(64)` | não | default `UTC`; valor IANA validado pela aplicação |
-| `is_active` | `boolean` | não | default `true` |
-| `created_at` | `timestamptz` | não | default `CURRENT_TIMESTAMP` |
-| `updated_at` | `timestamptz` | não | default `CURRENT_TIMESTAMP` |
+| Campo | Regra principal |
+|---|---|
+| `id` | UUID, PK |
+| `slug` | identificador único do tenant |
+| `name` | nome do tenant |
+| `timezone` | timezone IANA; default operacional UTC |
+| `is_active` | flag de ativação |
+| `created_at` / `updated_at` | timestamps de auditoria básica |
 
-Constraints propostas:
-
-- `PRIMARY KEY (id)`;
-- `UNIQUE (slug)`;
-- `CHECK (char_length(slug) BETWEEN 2 AND 64)`;
-- `CHECK (char_length(name) BETWEEN 2 AND 120)`;
-- `CHECK (updated_at >= created_at)`.
+O tenant não deve ser removido fisicamente enquanto possuir dados operacionais relacionados.
 
 ## `incidents`
 
-| Campo | Tipo | Null | Regra |
-|---|---|---:|---|
-| `id` | `uuid` | não | PK |
-| `tenant_id` | `uuid` | não | FK → `tenants.id`; `ON DELETE RESTRICT` |
-| `title` | `varchar(120)` | não | 3–120 caracteres |
-| `affected_resource` | `varchar(120)` | não | 2–120 caracteres |
-| `severity` | `varchar(16)` | não | `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
-| `impact_type` | `varchar(16)` | não | `OUTAGE`, `DEGRADATION` |
-| `symptoms` | `text` | não | 10–2000 caracteres |
-| `status` | `varchar(24)` | não | default `OPEN`; conjunto de estados aprovado no domínio |
-| `started_at` | `timestamptz` | não | não pode ser posterior a `created_at` |
-| `created_by_subject` | `varchar(255)` | não | identificador confiável do ator resolvido pelo backend; nunca recebido como autoridade do cliente |
-| `created_at` | `timestamptz` | não | default `CURRENT_TIMESTAMP` |
-| `updated_at` | `timestamptz` | não | default `CURRENT_TIMESTAMP` |
-| `version` | `integer` | não | default `1`; reservado para concorrência otimista |
+| Campo | Regra principal |
+|---|---|
+| `id` | UUID, PK |
+| `tenant_id` | obrigatório; FK para tenant |
+| `title` | 3–120 caracteres |
+| `affected_resource` | 2–120 caracteres |
+| `severity` | `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
+| `impact_type` | `OUTAGE`, `DEGRADATION` |
+| `symptoms` | 10–2000 caracteres |
+| `status` | lifecycle do incidente |
+| `started_at` | início do incidente; não futuro no momento de criação |
+| `created_by_subject` | ator resolvido server-side |
+| `created_at` / `updated_at` | timestamps |
+| `version` | começa em 1 e incrementa em ações operacionais da Sprint 2 |
 
-Estados atualmente documentados no domínio:
+Estados de domínio atuais:
 
-- `OPEN`;
-- `ACKNOWLEDGED`;
-- `INVESTIGATING`;
-- `MONITORING`;
-- `RESOLVED`;
-- `CLOSED`.
+```text
+OPEN
+ACKNOWLEDGED
+INVESTIGATING
+MONITORING
+RESOLVED
+CLOSED
+```
 
-Constraints propostas:
+Na Sprint 2, a normalização suportada leva o incidente a `RESOLVED`. `CLOSED` permanece previsto para evolução posterior.
 
-- `PRIMARY KEY (id)`;
-- `FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE RESTRICT`;
-- `CHECK (char_length(title) BETWEEN 3 AND 120)`;
-- `CHECK (char_length(affected_resource) BETWEEN 2 AND 120)`;
-- `CHECK (severity IN ('CRITICAL','HIGH','MEDIUM','LOW'))`;
-- `CHECK (impact_type IN ('OUTAGE','DEGRADATION'))`;
-- `CHECK (char_length(symptoms) BETWEEN 10 AND 2000)`;
-- `CHECK (status IN ('OPEN','ACKNOWLEDGED','INVESTIGATING','MONITORING','RESOLVED','CLOSED'))`;
-- `CHECK (started_at <= created_at)`;
-- `CHECK (updated_at >= created_at)`;
-- `CHECK (version >= 1)`.
+## `incident_events`
 
-### Compatibilidade com autenticação futura
+Criada na Sprint 2 para suportar US-004/005/006.
 
-Na Sprint 1, `created_by_subject` evita criar antecipadamente o agregado de identidade. Quando `users` e `memberships` entrarem na Sprint 3, a migration deverá usar estratégia expand/contract:
+| Campo | Regra principal |
+|---|---|
+| `id` | UUID, PK |
+| `tenant_id` | obrigatório e tenant-scoped |
+| `incident_id` | incidente pai |
+| `event_type` | tipo estável do evento |
+| `message` | conteúdo opcional conforme evento |
+| `actor_subject` | ator resolvido pelo backend |
+| `occurred_at` | timestamp do evento |
 
-1. adicionar `created_by_user_id` nullable;
-2. backfill pela correspondência com `users.external_subject`;
-3. validar cobertura;
-4. tornar FK/not-null quando aplicável;
-5. retirar `created_by_subject` somente em migration posterior e após compatibilidade do backend.
+Tipos implementados:
 
-Nenhuma migration deve combinar inclusão da nova coluna, backfill e remoção destrutiva da antiga em um único deploy de produção.
+```text
+INCIDENT_CREATED
+INCIDENT_UPDATED
+INCIDENT_NORMALIZED
+```
 
-## Índices — Sprint 1
+Regras:
+- evento de criação é gravado junto da criação do incidente;
+- atualização operacional grava novo evento e incrementa `incident.version`;
+- normalização grava novo evento, muda status para `RESOLVED` e incrementa `version`;
+- persistência do incidente pai é materializada antes do evento correspondente dentro da transação, evitando violação de FK;
+- eventos são retornados em ordem cronológica;
+- nenhum fluxo HTTP suportado modifica ou remove eventos já gravados.
 
-### `incidents`
+## Isolamento por tenant
 
-1. `idx_incidents_tenant_started_at`
-   - `(tenant_id, started_at DESC, created_at DESC)`
-   - suporta US-001: listagem do tenant em ordem temporal.
+Consultas de incidentes e timeline incluem o tenant do contexto server-side. O cliente não fornece `tenant_id` como autoridade.
 
-2. `idx_incidents_tenant_status_started_at`
-   - `(tenant_id, status, started_at DESC)`
-   - prepara listagens operacionais e evolução da Sprint 2 sem índice global que atravesse tenants.
+A modelagem mantém `tenant_id` também em `incident_events` para permitir filtragem explícita, defesa em profundidade e futuras constraints compostas de pertencimento ao mesmo tenant.
 
-3. `UNIQUE (tenant_id, id)`
-   - redundante para unicidade global do UUID, mas deliberado para permitir FKs compostas futuras que garantam pertencimento ao mesmo tenant em tabelas filhas, como `incident_events`.
+## Índices e padrões de consulta
 
-Não criar índices adicionais sem padrão de consulta demonstrado. Cada índice aumenta custo de escrita e manutenção.
+Os índices de incidentes priorizam consultas tenant-scoped por tempo e status. A Sprint 2 também executa filtros por:
+
+- `status`;
+- `severity`;
+- intervalo de `started_at`;
+- ordenação por `started_at` ou `updated_at`.
+
+A timeline é consultada por `(tenant_id, incident_id)` e ordenada por `occurred_at`/identificador.
+
+Novos índices só devem ser adicionados quando houver padrão de consulta demonstrado; excesso de índice aumenta custo de escrita.
+
+## Paginação
+
+A consulta avançada da Sprint 2 usa offset/limit por `page` e `page_size` (máximo 100), adequado ao volume da alpha. Cursor pagination permanece opção para evolução quando volume/concorrência justificarem.
 
 ## Estratégia de migrations
 
-As migrations são versionadas no repositório e fazem parte do artefato de deploy.
-
-Regras:
-
 - cada alteração de schema possui migration explícita;
-- migrations devem ser determinísticas e reproduzíveis;
-- mudanças destrutivas usam expand/contract;
-- adicionar coluna obrigatória em tabela populada exige etapa intermediária nullable/default/backfill antes de `NOT NULL`;
-- criação de índice pesado em ambiente de produção deve considerar `CONCURRENTLY` quando o mecanismo de migration permitir;
-- rollback de produção não deve depender de apagar dados recém-gravados; quando necessário, preferir correção forward;
-- downgrade destrutivo é aceitável apenas em ambientes descartáveis e deve ser documentado;
-- schema e aplicação devem permanecer compatíveis durante deploy rolling quando aplicável.
+- migrations precisam ser determinísticas e reproduzíveis;
+- mudanças destrutivas devem seguir expand/contract;
+- produção futura deve preferir correção forward quando rollback implicar perda de dados;
+- migrations e testes são executados contra PostgreSQL no CI;
+- downgrade destrutivo é aceitável apenas em ambientes descartáveis e deve ser documentado.
 
-### TASK-DB-004
+A migration da Sprint 2 cria `incident_events` e preserva a integridade do histórico necessário ao incremento.
 
-A implementação executável da primeira migration deve ser criada junto da fundação real da API/ORM. Enquanto `apps/api` estiver explicitamente reservado sem código executável, este documento funciona como contrato de schema para a migration inicial.
+## Compatibilidade com identidade futura
 
-Framework recomendado para o stack FastAPI + SQLAlchemy: Alembic, sujeito à confirmação final da fundação de backend/arquitetura.
+`created_by_subject` e `actor_subject` representam o subject do ator resolvido pelo backend. Na alpha, o provider demo existe apenas em `development/test`.
 
-## Retenção e auditoria
-
-Sprint 1:
-
-- não excluir incidentes por fluxo funcional;
-- dados do projeto público devem ser sintéticos;
-- tenant inativo permanece referenciável para preservar histórico.
-
-Roadmap:
-
-- `incident_events` será append-only para timeline operacional;
-- `audit_events` será trilha separada para governança/segurança;
-- política de retenção de produção depende de requisitos legais, contratuais e de privacidade antes da entrada em produção real.
+Quando `users`/`memberships` e OIDC/RBAC entrarem, a migração deve seguir expand/contract, preservando histórico e evitando remover os subjects existentes no mesmo deploy em que as novas FKs forem introduzidas.
 
 ## Modelo alvo do roadmap
 
@@ -195,8 +187,6 @@ erDiagram
     CARRIER ||--o{ CIRCUIT : provides
     TENANT ||--o{ SEVERITY : defines
     TENANT ||--o{ INCIDENT : owns
-    SITE ||--o{ INCIDENT : affects
-    SEVERITY ||--o{ INCIDENT : classifies
     INCIDENT ||--o{ INCIDENT_EVENT : contains
     INCIDENT ||--o{ PROTOCOL_LINK : links
     TENANT ||--o{ TEMPLATE : defines
@@ -204,22 +194,21 @@ erDiagram
     INCIDENT ||--o{ COMMUNICATION : renders
     TENANT ||--o{ HANDOVER : owns
     HANDOVER ||--o{ HANDOVER_ITEM : snapshots
-    INCIDENT ||--o{ HANDOVER_ITEM : references
     TENANT ||--o{ AUDIT_EVENT : records
 ```
 
-Entidades do roadmap não devem ser criadas na Sprint 1 apenas por estarem previstas. A evolução ocorrerá por migrations conforme histórias aprovadas.
+Entidades do roadmap não devem ser antecipadas no schema apenas por estarem previstas.
 
-## Checklist de integridade para alterações futuras
+## Checklist para alterações futuras
 
 Toda mudança de schema deve responder:
 
-1. Qual requisito/história exige a alteração?
-2. O modelo continua isolando tenant corretamente?
-3. Existe risco de perda ou corrupção de dados?
-4. A migration é compatível com a versão anterior da aplicação durante o deploy?
-5. É necessário backfill?
-6. Índices cobrem consultas reais sem excesso?
-7. Existe estratégia de rollback ou correção forward?
-8. A alteração preserva rastreabilidade/auditoria?
-9. Backend e Product Owner precisam validar alguma mudança de regra de negócio?
+1. Qual história/requisito exige a alteração?
+2. O isolamento por tenant permanece explícito?
+3. Há risco de perda/corrupção de dados?
+4. A migration é compatível com a aplicação durante rollout?
+5. Existe necessidade de backfill?
+6. Índices correspondem a consultas reais?
+7. Existe estratégia de rollback/correção forward?
+8. Histórico e auditoria são preservados?
+9. Backend, Database, Security e PO precisam validar alguma mudança de regra?

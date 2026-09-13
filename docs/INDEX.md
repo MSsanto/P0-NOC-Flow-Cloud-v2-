@@ -13,19 +13,21 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 - [Definition of Done](scrum/DEFINITION_OF_DONE.md)
 - [Sprint 001 — contrato detalhado](scrum/SPRINT_001.md)
 - [Sprint 1 — resumo e evidências](sprints/SPRINT_01.md)
-- [Sprint 002](scrum/SPRINT_002.md)
+- [Sprint 002 — contrato detalhado e fechamento](scrum/SPRINT_002.md)
+- [Sprint 2 — resumo e evidências](sprints/SPRINT_02.md)
 - [Retrospectives](scrum/RETROSPECTIVES.md)
 
 ## Release e homologação
 
 - [Roteiro de homologação — v0.1.0-alpha](releases/V0.1.0-ALPHA-HOMOLOGATION.md)
+- [Roteiro de homologação — v0.2.0-alpha](releases/V0.2.0-ALPHA-HOMOLOGATION.md)
 
 ## Arquitetura
 
 - [Índice de arquitetura](architecture/README.md)
 - [Arquitetura atual](03-ARCHITECTURE.md)
 - [Modelo de domínio](04-DOMAIN-MODEL.md)
-- [Modelo lógico de dados](05-DATA-MODEL.md)
+- [Modelo lógico/físico de dados](05-DATA-MODEL.md)
 - [DevOps e Azure](10-DEVOPS-AZURE.md)
 - [Observabilidade](11-OBSERVABILITY.md)
 - [Plano de implementação](16-IMPLEMENTATION-PLAN.md)
@@ -51,6 +53,7 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 
 - [Índice da API](api/README.md)
 - [Contrato da API v1](06-API-CONTRACT.md)
+- [Contrato executado de incidentes — Sprint 2](api/SPRINT_02-INCIDENTS.md)
 
 ## UX
 
