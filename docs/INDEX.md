@@ -31,6 +31,10 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 - [Plano de implementação](16-IMPLEMENTATION-PLAN.md)
 - [Matriz de rastreabilidade](17-TRACEABILITY.md)
 
+## Integrações
+
+- [Monitoring & Notifications — Zabbix + WhatsApp](integrations/MONITORING-NOTIFICATIONS.md)
+
 ## Architecture Decision Records
 
 - [Índice de ADRs](adr/README.md)
