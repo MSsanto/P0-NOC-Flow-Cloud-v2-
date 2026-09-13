@@ -1,0 +1,43 @@
+name: Private Demo Compose
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-private-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Render private Compose
+        run: docker compose --env-file .env.example -f compose.private.yaml config --format json > /tmp/private-compose.json
+
+      - name: Validate private exposure model
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          config = json.loads(Path('/tmp/private-compose.json').read_text())
+          services = config['services']
+
+          required = {'postgres', 'backend', 'web', 'cloudflared'}
+          missing = required - services.keys()
+          assert not missing, f'Missing services: {sorted(missing)}'
+
+          for name in ('postgres', 'backend', 'web'):
+              assert not services[name].get('ports'), f'{name} must not publish host ports in private demo'
+
+          cloudflared = services['cloudflared']
+          environment = cloudflared.get('environment', {})
+          assert environment.get('TUNNEL_TOKEN'), 'cloudflared must receive TUNNEL_TOKEN from environment'
+
+          print('Private demo Compose exposure model OK')
+          PY
