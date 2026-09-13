@@ -2,23 +2,19 @@
 
 Este diretório organiza contratos, convenções, autenticação, erros e exemplos da API do P0 — NOC Flow Cloud v2.
 
-## Referência atual
+## Referências atuais
 
-- [Contrato conceitual da API v1](../06-API-CONTRACT.md)
+- [Contrato geral da API v1](../06-API-CONTRACT.md)
+- [Incidentes — contrato executado na Sprint 2](SPRINT_02-INCIDENTS.md)
+- OpenAPI executável em `/api/v1/openapi.json` quando a aplicação está em execução
+- Swagger em `/api/v1/docs`
 
-## Conteúdo esperado
+## Estado atual
 
-À medida que a API for implementada, este diretório deve concentrar:
+Até a Sprint 2 estão implementados os fluxos de criação/listagem/detalhe, atualização operacional, normalização, timeline e consulta avançada com filtros/paginação/ordenação.
 
-- convenções REST;
-- versionamento;
-- autenticação e autorização;
-- códigos de erro;
-- exemplos de request/response;
-- paginação, filtros e ordenação;
-- idempotência quando aplicável;
-- integração com a especificação OpenAPI gerada pelo FastAPI.
+OIDC/RBAC e identidade confiável ainda não estão implementados; a API permanece homologável apenas em ambiente local/teste.
 
 ## Regra de manutenção
 
-Nenhuma mudança de contrato deve ser documentada como concluída antes de estar alinhada com Backend, Frontend e QA. A documentação deve refletir o comportamento real da API.
+Nenhuma mudança de contrato deve ser documentada como concluída antes de estar alinhada com Backend, Frontend e QA. Em caso de divergência, o OpenAPI e o comportamento testado devem ser reconciliados com esta documentação antes do fechamento da Sprint.
