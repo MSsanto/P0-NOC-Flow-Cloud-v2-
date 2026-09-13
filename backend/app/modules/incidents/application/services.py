@@ -34,8 +34,12 @@ class IncidentService:
     def __init__(self, repository: IncidentRepository) -> None:
         self.repository = repository
 
-    def list_incidents(self, tenant_id: UUID, query: IncidentListQuery) -> IncidentPage:
-        return self.repository.list_for_tenant(tenant_id, query)
+    def list_incidents(
+        self,
+        tenant_id: UUID,
+        query: IncidentListQuery | None = None,
+    ) -> IncidentPage:
+        return self.repository.list_for_tenant(tenant_id, query or IncidentListQuery())
 
     def get_incident(self, tenant_id: UUID, incident_id: UUID) -> Incident | None:
         return self.repository.get_for_tenant(tenant_id, incident_id)
