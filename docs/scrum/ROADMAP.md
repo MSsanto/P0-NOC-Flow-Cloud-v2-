@@ -1,7 +1,7 @@
 # Roadmap — P0 NOC Flow Cloud v2
 
 **Status:** baseline aprovado para planejamento  
-**Modelo:** 6 Sprints de 2 semanas  
+**Modelo:** 6 Sprints de 2 semanas até v1.0 + backlog pós-v1.0  
 **Objetivo de release:** v1.0.0 ao final da Sprint 6
 
 > O roadmap define a sequência de execução. Mudanças de escopo ou prioridade devem passar pelo Product Owner e ser coordenadas pelo Scrum Master/Orchestrator.
@@ -108,12 +108,49 @@ Em todas as Sprints:
 - Release/Homologation executa o quality gate;
 - itens Done devem atender à [Definition of Done](DEFINITION_OF_DONE.md).
 
-## Pós-v1.0
+## Pós-v1.0 — Monitoring & Notifications
 
-Ficam fora do MVP inicial:
+Novo épico de integração aprovado para o backlog pós-v1.0, sem alterar o escopo das seis Sprints atuais.
+
+Objetivo: detectar indisponibilidades persistentes a partir do Zabbix, reduzir falsos positivos por meio de janela configurável e criar/notificar incidentes automaticamente.
+
+Fluxo de referência:
+
+```text
+Zabbix
+  ↓
+evento normalizado
+  ↓
+PENDING
+  ↓ janela configurável (referência inicial: 20 min)
+revalidação
+  ├─ recuperou → encerra sem incidente
+  └─ continua DOWN → cria incidente
+                     ↓
+              NotificationService
+                 ├─ Evolution API (lab/demo)
+                 └─ provider oficial futuro
+```
+
+Entregas candidatas:
+- adapter Zabbix;
+- contrato interno de evento normalizado;
+- persistência/correlação/idempotência de eventos;
+- regra configurável de persistência antes da abertura automática;
+- revalidação da condição e cancelamento de falso positivo;
+- criação automática idempotente de incidente;
+- `NotificationService` independente de canal;
+- provider WhatsApp via Evolution API para laboratório/demo controlado;
+- provider oficial alternativo para implantação empresarial;
+- notificação de abertura e normalização;
+- retry limitado, auditoria e observabilidade das integrações.
+
+Documento de refinamento: [`../integrations/MONITORING-NOTIFICATIONS.md`](../integrations/MONITORING-NOTIFICATIONS.md).
+
+## Outros itens pós-v1.0
+
 - ServiceNow/ITSM;
 - integrações automáticas com operadoras;
-- webhooks e notificações;
 - analytics avançado;
 - SLA configurável;
 - PWA/mobile;
