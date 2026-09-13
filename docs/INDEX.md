@@ -34,6 +34,7 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 ## Integrações
 
 - [Monitoring & Notifications — Zabbix + WhatsApp](integrations/MONITORING-NOTIFICATIONS.md)
+- [ITSM Integration — Plusoft, GLPI/Zammad e providers futuros](integrations/ITSM-INTEGRATION.md)
 
 ## Architecture Decision Records
 
