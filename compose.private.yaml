@@ -1,0 +1,71 @@
+name: noc-flow-cloud-v2-private
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nocflow}
+      POSTGRES_USER: ${POSTGRES_USER:-nocflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in a local env file}
+    volumes:
+      - nocflow_private_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nocflow} -d ${POSTGRES_DB:-nocflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      # The current demo identity provider is intentionally enabled only in
+      # development/test. This private deployment is not production.
+      NOCFLOW_ENVIRONMENT: development
+      NOCFLOW_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-nocflow}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in a local env file}@postgres:5432/${POSTGRES_DB:-nocflow}
+      NOCFLOW_CORS_ORIGINS: '[]'
+      NOCFLOW_LOG_LEVEL: INFO
+    command: >-
+      sh -c "alembic upgrade head &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/ready', timeout=2).read()"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./apps/web
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --loglevel info run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN in a local env file}
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  nocflow_private_postgres_data:
