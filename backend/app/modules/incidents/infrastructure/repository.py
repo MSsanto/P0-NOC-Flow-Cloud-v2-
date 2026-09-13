@@ -92,7 +92,9 @@ class SqlAlchemyIncidentRepository:
             updated_at=incident.updated_at,
             version=incident.version,
         )
-        self.session.add_all([model, _event_model(event)])
+        self.session.add(model)
+        self.session.flush()
+        self.session.add(_event_model(event))
         self.session.commit()
         self.session.refresh(model)
         return _to_domain(model)
