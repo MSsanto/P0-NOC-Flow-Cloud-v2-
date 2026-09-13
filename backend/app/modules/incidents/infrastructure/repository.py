@@ -1,8 +1,14 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import asc, desc, func, select
 from sqlalchemy.orm import Session
 
+from app.modules.incidents.application.queries import (
+    IncidentListQuery,
+    IncidentPage,
+    IncidentSortField,
+    SortOrder,
+)
 from app.modules.incidents.domain.entities import (
     Incident,
     IncidentEvent,
@@ -60,13 +66,40 @@ class SqlAlchemyIncidentRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def list_for_tenant(self, tenant_id: UUID) -> list[Incident]:
+    def list_for_tenant(self, tenant_id: UUID, query: IncidentListQuery) -> IncidentPage:
+        conditions = [IncidentModel.tenant_id == tenant_id]
+        if query.status is not None:
+            conditions.append(IncidentModel.status == query.status.value)
+        if query.severity is not None:
+            conditions.append(IncidentModel.severity == query.severity.value)
+        if query.started_from is not None:
+            conditions.append(IncidentModel.started_at >= query.started_from)
+        if query.started_to is not None:
+            conditions.append(IncidentModel.started_at <= query.started_to)
+
+        total_statement = select(func.count()).select_from(IncidentModel).where(*conditions)
+        total = self.session.scalar(total_statement) or 0
+
+        sort_column = (
+            IncidentModel.updated_at
+            if query.sort is IncidentSortField.UPDATED_AT
+            else IncidentModel.started_at
+        )
+        direction = asc if query.order is SortOrder.ASC else desc
         statement = (
             select(IncidentModel)
-            .where(IncidentModel.tenant_id == tenant_id)
-            .order_by(IncidentModel.started_at.desc(), IncidentModel.created_at.desc())
+            .where(*conditions)
+            .order_by(direction(sort_column), direction(IncidentModel.created_at))
+            .offset(query.offset)
+            .limit(query.page_size)
         )
-        return [_to_domain(model) for model in self.session.scalars(statement).all()]
+        items = [_to_domain(model) for model in self.session.scalars(statement).all()]
+        return IncidentPage(
+            items=items,
+            page=query.page,
+            page_size=query.page_size,
+            total=total,
+        )
 
     def get_for_tenant(self, tenant_id: UUID, incident_id: UUID) -> Incident | None:
         statement = select(IncidentModel).where(
