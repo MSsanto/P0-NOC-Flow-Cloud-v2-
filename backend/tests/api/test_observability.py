@@ -3,9 +3,9 @@ import logging
 
 from fastapi.testclient import TestClient
 
+from app.core import middleware
 from app.core.config import get_settings
 from app.core.logging import JsonFormatter
-from app.core import middleware
 from app.main import app
 
 
