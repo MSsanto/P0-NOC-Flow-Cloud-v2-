@@ -65,7 +65,7 @@ def test_request_log_correlates_request_and_trace_without_headers(monkeypatch) -
     assert isinstance(extra, dict)
     assert extra["request_id"] == "req-observability-1"
     assert extra["trace_id"] == trace_id
-    assert extra["route"] == "/api/v1/health/live"
+    assert extra["route"] == "/health/live"
     assert extra["method"] == "GET"
     assert extra["status_code"] == 200
     assert "must-not-be-logged" not in repr(extra)
