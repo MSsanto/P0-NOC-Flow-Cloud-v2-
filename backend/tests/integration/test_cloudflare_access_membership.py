@@ -56,7 +56,7 @@ def _install_identity(monkeypatch, *, subject: str, email: str) -> None:
     monkeypatch.setattr(dependencies, "CloudflareAccessTokenValidator", FakeValidator)
 
 
-def test_configured_cloudflare_bootstrap_email_creates_first_admin(monkeypatch) -> None:
+def test_configured_cloudflare_bootstrap_creates_private_tenant_and_admin(monkeypatch) -> None:
     tenant_id = uuid4()
     _install_identity(
         monkeypatch,
@@ -66,17 +66,6 @@ def test_configured_cloudflare_bootstrap_email_creates_first_admin(monkeypatch) 
 
     factory = get_session_factory()
     with factory() as session:
-        session.add(
-            TenantModel(
-                id=tenant_id,
-                slug="tenant-a",
-                name="Tenant A",
-                timezone="UTC",
-                is_active=True,
-            )
-        )
-        session.commit()
-
         context = dependencies.get_request_context(
             credentials=None,
             session=session,
@@ -84,9 +73,12 @@ def test_configured_cloudflare_bootstrap_email_creates_first_admin(monkeypatch) 
             cloudflare_access_token="signed-access-token",
         )
 
+        tenant = session.get(TenantModel, tenant_id)
         user = session.scalar(
             select(UserModel).where(UserModel.external_subject == "cf-user-123")
         )
+        assert tenant is not None
+        assert tenant.slug == "private-demo"
         assert user is not None
         membership = session.get(TenantMembershipModel, (tenant_id, user.id))
 
