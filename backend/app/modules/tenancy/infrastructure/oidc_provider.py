@@ -4,7 +4,7 @@ from uuid import UUID
 
 import jwt
 from jwt import PyJWKClient
-from jwt.exceptions import PyJWTError
+from jwt.exceptions import PyJWKClientError, PyJWTError
 
 from app.core.config import Settings
 from app.modules.tenancy.application.context import RequestContext
@@ -67,7 +67,7 @@ class OidcTokenValidator:
                 leeway=self.config.leeway_seconds,
                 options={"require": ["exp", "iat", "iss", "aud", "sub"]},
             )
-        except (PyJWTError, OSError, ValueError) as exc:
+        except (PyJWKClientError, PyJWTError, OSError, ValueError) as exc:
             raise AuthenticationError("Bearer token validation failed.") from exc
 
         return self._request_context_from_claims(claims)
