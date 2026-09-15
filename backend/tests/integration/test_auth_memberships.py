@@ -85,6 +85,7 @@ def test_oidc_context_uses_internal_membership_role(monkeypatch) -> None:
                 is_active=True,
             )
         )
+        session.flush()
         session.add(
             TenantMembershipModel(
                 tenant_id=tenant_id,
@@ -139,13 +140,16 @@ def test_cross_tenant_request_without_membership_is_denied(monkeypatch) -> None:
                     external_subject="operator@example.test",
                     is_active=True,
                 ),
-                TenantMembershipModel(
-                    tenant_id=tenant_a,
-                    user_id=user_id,
-                    role=Role.OPERATOR.value,
-                    is_active=True,
-                ),
             ]
+        )
+        session.flush()
+        session.add(
+            TenantMembershipModel(
+                tenant_id=tenant_a,
+                user_id=user_id,
+                role=Role.OPERATOR.value,
+                is_active=True,
+            )
         )
         session.commit()
 
@@ -187,6 +191,7 @@ def test_inactive_membership_is_denied(monkeypatch) -> None:
                 is_active=True,
             )
         )
+        session.flush()
         session.add(
             TenantMembershipModel(
                 tenant_id=tenant_id,
