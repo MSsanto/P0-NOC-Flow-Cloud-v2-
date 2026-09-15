@@ -3,18 +3,23 @@ from typing import Annotated
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError
 from app.db.session import get_db_session
 from app.modules.tenancy.application.context import RequestContext
-from app.modules.tenancy.application.security import Permission
+from app.modules.tenancy.application.security import Permission, Role
 from app.modules.tenancy.infrastructure.demo_provider import (
     DemoContextUnavailableError,
     resolve_demo_context,
 )
-from app.modules.tenancy.infrastructure.models import TenantModel
+from app.modules.tenancy.infrastructure.models import (
+    TenantMembershipModel,
+    TenantModel,
+    UserModel,
+)
 from app.modules.tenancy.infrastructure.oidc_provider import (
     AuthenticationError,
     IdentityProviderConfigurationError,
@@ -44,6 +49,16 @@ def _invalid_token() -> AppError:
     )
 
 
+def _tenant_access_denied() -> AppError:
+    return AppError(
+        status_code=403,
+        title="Tenant access denied",
+        detail="The authenticated identity is not authorized for an active tenant.",
+        code="TENANT_ACCESS_DENIED",
+        problem_slug="tenant-access-denied",
+    )
+
+
 def get_request_context(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
     session: Annotated[Session, Depends(get_db_session)],
@@ -65,7 +80,7 @@ def get_request_context(
         raise _auth_required()
 
     try:
-        context = OidcTokenValidator(settings).validate(credentials.credentials)
+        identity = OidcTokenValidator(settings).validate(credentials.credentials)
     except IdentityProviderConfigurationError as exc:
         raise AppError(
             status_code=503,
@@ -77,16 +92,41 @@ def get_request_context(
     except AuthenticationError as exc:
         raise _invalid_token() from exc
 
-    tenant = session.get(TenantModel, context.tenant_id)
-    if tenant is None or not tenant.is_active:
+    user = session.scalar(
+        select(UserModel).where(UserModel.external_subject == identity.subject)
+    )
+    if user is None or not user.is_active:
+        raise _tenant_access_denied()
+
+    tenant = session.get(TenantModel, identity.requested_tenant_id)
+    membership = session.get(
+        TenantMembershipModel,
+        (identity.requested_tenant_id, user.id),
+    )
+    if (
+        tenant is None
+        or not tenant.is_active
+        or membership is None
+        or not membership.is_active
+    ):
+        raise _tenant_access_denied()
+
+    try:
+        role = Role(membership.role)
+    except ValueError as exc:
         raise AppError(
-            status_code=403,
-            title="Tenant access denied",
-            detail="The authenticated identity is not authorized for an active tenant.",
-            code="TENANT_ACCESS_DENIED",
-            problem_slug="tenant-access-denied",
-        )
-    return context
+            status_code=503,
+            title="Identity context unavailable",
+            detail="The internal membership role is invalid.",
+            code="IDENTITY_CONTEXT_UNAVAILABLE",
+            problem_slug="identity-context-unavailable",
+        ) from exc
+
+    return RequestContext(
+        tenant_id=identity.requested_tenant_id,
+        actor_subject=identity.subject,
+        roles=frozenset({role}),
+    )
 
 
 def require_permission(
