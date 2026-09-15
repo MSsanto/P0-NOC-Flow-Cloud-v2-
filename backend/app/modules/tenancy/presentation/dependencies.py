@@ -128,7 +128,17 @@ def _bootstrap_cloudflare_admin(
         return
 
     tenant = session.get(TenantModel, tenant_id)
-    if tenant is None or not tenant.is_active:
+    if tenant is None:
+        tenant = TenantModel(
+            id=tenant_id,
+            slug="private-demo",
+            name="NOC Flow Private Demo",
+            timezone="UTC",
+            is_active=True,
+        )
+        session.add(tenant)
+        session.flush()
+    elif not tenant.is_active:
         return
 
     user = session.scalar(
@@ -138,6 +148,8 @@ def _bootstrap_cloudflare_admin(
         user = UserModel(external_subject=identity.subject, is_active=True)
         session.add(user)
         session.flush()
+    elif not user.is_active:
+        return
 
     membership = session.get(TenantMembershipModel, (tenant_id, user.id))
     if membership is None:
