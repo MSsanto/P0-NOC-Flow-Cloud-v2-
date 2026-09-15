@@ -7,8 +7,6 @@ from jwt import PyJWKClient
 from jwt.exceptions import PyJWKClientError, PyJWTError
 
 from app.core.config import Settings
-from app.modules.tenancy.application.context import RequestContext
-from app.modules.tenancy.application.security import Role
 
 
 class IdentityProviderConfigurationError(RuntimeError):
@@ -20,13 +18,18 @@ class AuthenticationError(ValueError):
 
 
 @dataclass(frozen=True, slots=True)
+class ExternalIdentity:
+    subject: str
+    requested_tenant_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
 class OidcConfiguration:
     issuer: str
     audience: str
     jwks_url: str
     algorithms: tuple[str, ...]
     tenant_claim: str
-    roles_claim: str
     leeway_seconds: int
 
     @classmethod
@@ -45,7 +48,6 @@ class OidcConfiguration:
             jwks_url=settings.oidc_jwks_url,
             algorithms=tuple(settings.oidc_algorithms),
             tenant_claim=settings.oidc_tenant_claim,
-            roles_claim=settings.oidc_roles_claim,
             leeway_seconds=settings.oidc_leeway_seconds,
         )
 
@@ -55,7 +57,7 @@ class OidcTokenValidator:
         self.config = OidcConfiguration.from_settings(settings)
         self.jwk_client = jwk_client or PyJWKClient(self.config.jwks_url)
 
-    def validate(self, token: str) -> RequestContext:
+    def validate(self, token: str) -> ExternalIdentity:
         try:
             signing_key = self.jwk_client.get_signing_key_from_jwt(token).key
             claims = jwt.decode(
@@ -70,9 +72,9 @@ class OidcTokenValidator:
         except (PyJWKClientError, PyJWTError, OSError, ValueError) as exc:
             raise AuthenticationError("Bearer token validation failed.") from exc
 
-        return self._request_context_from_claims(claims)
+        return self._external_identity_from_claims(claims)
 
-    def _request_context_from_claims(self, claims: dict[str, Any]) -> RequestContext:
+    def _external_identity_from_claims(self, claims: dict[str, Any]) -> ExternalIdentity:
         subject = claims.get("sub")
         if not isinstance(subject, str) or not subject.strip():
             raise AuthenticationError("Token subject claim is invalid.")
@@ -83,23 +85,7 @@ class OidcTokenValidator:
         except (TypeError, ValueError) as exc:
             raise AuthenticationError("Token tenant claim is invalid.") from exc
 
-        raw_roles = claims.get(self.config.roles_claim)
-        if isinstance(raw_roles, str):
-            role_values = [raw_roles]
-        elif isinstance(raw_roles, list) and all(isinstance(item, str) for item in raw_roles):
-            role_values = raw_roles
-        else:
-            raise AuthenticationError("Token roles claim is invalid.")
-
-        try:
-            roles = frozenset(Role(value) for value in role_values)
-        except ValueError as exc:
-            raise AuthenticationError("Token contains an unsupported role.") from exc
-        if not roles:
-            raise AuthenticationError("Token must contain at least one role.")
-
-        return RequestContext(
-            tenant_id=tenant_id,
-            actor_subject=subject.strip(),
-            roles=roles,
+        return ExternalIdentity(
+            subject=subject.strip(),
+            requested_tenant_id=tenant_id,
         )
