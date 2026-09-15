@@ -7,6 +7,8 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from app.core.config import Settings
+from app.core.errors import AppError
+from app.modules.tenancy.application.context import RequestContext
 from app.modules.tenancy.application.security import Permission, Role, permissions_for_roles
 from app.modules.tenancy.infrastructure.oidc_provider import (
     AuthenticationError,
@@ -14,6 +16,7 @@ from app.modules.tenancy.infrastructure.oidc_provider import (
     OidcConfiguration,
     OidcTokenValidator,
 )
+from app.modules.tenancy.presentation.dependencies import get_request_context, require_permission
 
 
 class FakeJwkClient:
@@ -34,7 +37,13 @@ def _settings() -> Settings:
     )
 
 
-def _token(private_key, *, tenant_id: str, roles: list[str], expires_delta: timedelta = timedelta(minutes=5)) -> str:
+def _token(
+    private_key,
+    *,
+    tenant_id: str,
+    roles: list[str],
+    expires_delta: timedelta = timedelta(minutes=5),
+) -> str:
     now = datetime.now(UTC)
     return jwt.encode(
         {
@@ -60,6 +69,33 @@ def test_role_permissions_follow_least_privilege() -> None:
     assert Permission.INCIDENT_CREATE in operator
     assert Permission.INCIDENT_UPDATE in operator
     assert Permission.INCIDENT_NORMALIZE in operator
+
+
+def test_permission_dependency_returns_403_for_viewer_write() -> None:
+    context = RequestContext(
+        tenant_id=UUID("00000000-0000-4000-8000-000000000123"),
+        actor_subject="viewer@example.test",
+        roles=frozenset({Role.VIEWER}),
+    )
+    dependency = require_permission(Permission.INCIDENT_CREATE)
+
+    with pytest.raises(AppError) as exc_info:
+        dependency(context)
+
+    assert exc_info.value.status_code == 403
+    assert exc_info.value.code == "AUTH_FORBIDDEN"
+
+
+def test_oidc_mode_without_bearer_returns_consistent_401() -> None:
+    with pytest.raises(AppError) as exc_info:
+        get_request_context(
+            credentials=None,
+            session=None,  # type: ignore[arg-type]
+            settings=_settings(),
+        )
+
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.code == "AUTH_REQUIRED"
 
 
 def test_oidc_configuration_is_fail_closed_when_required_values_are_missing() -> None:
