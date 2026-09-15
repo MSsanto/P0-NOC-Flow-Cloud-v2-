@@ -19,7 +19,8 @@ from app.modules.incidents.presentation.schemas import (
     IncidentResponse,
 )
 from app.modules.tenancy.application.context import RequestContext
-from app.modules.tenancy.presentation.dependencies import get_request_context
+from app.modules.tenancy.application.security import Permission
+from app.modules.tenancy.presentation.dependencies import require_permission
 
 
 def _as_utc(value: datetime | None) -> datetime | None:
@@ -32,7 +33,9 @@ def _as_utc(value: datetime | None) -> datetime | None:
 
 def query_incidents(
     session: Annotated[Session, Depends(get_db_session)],
-    context: Annotated[RequestContext, Depends(get_request_context)],
+    context: Annotated[
+        RequestContext, Depends(require_permission(Permission.INCIDENT_READ))
+    ],
     status_filter: Annotated[IncidentStatus | None, Query(alias="status")] = None,
     severity: Annotated[IncidentSeverity | None, Query()] = None,
     started_from: Annotated[datetime | None, Query()] = None,
