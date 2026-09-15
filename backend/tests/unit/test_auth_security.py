@@ -41,7 +41,6 @@ def _token(
     private_key,
     *,
     tenant_id: str,
-    roles: list[str],
     expires_delta: timedelta = timedelta(minutes=5),
 ) -> str:
     now = datetime.now(UTC)
@@ -53,7 +52,6 @@ def _token(
             "iat": now,
             "exp": now + expires_delta,
             "tenant_id": tenant_id,
-            "roles": roles,
         },
         private_key,
         algorithm="RS256",
@@ -103,24 +101,19 @@ def test_oidc_configuration_is_fail_closed_when_required_values_are_missing() ->
         OidcConfiguration.from_settings(Settings(environment="test", auth_mode="oidc"))
 
 
-def test_oidc_validator_accepts_signed_token_and_extracts_trusted_context() -> None:
+def test_oidc_validator_accepts_signed_token_and_extracts_external_identity() -> None:
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     tenant_id = UUID("00000000-0000-4000-8000-000000000123")
-    token = _token(
-        private_key,
-        tenant_id=str(tenant_id),
-        roles=[Role.OPERATOR.value],
-    )
+    token = _token(private_key, tenant_id=str(tenant_id))
 
-    context = OidcTokenValidator(
+    identity = OidcTokenValidator(
         _settings(),
         jwk_client=FakeJwkClient(private_key.public_key()),
     ).validate(token)
 
-    assert context.tenant_id == tenant_id
-    assert context.actor_subject == "operator@example.test"
-    assert context.roles == frozenset({Role.OPERATOR})
-    assert context.has_permission(Permission.INCIDENT_UPDATE)
+    assert identity.requested_tenant_id == tenant_id
+    assert identity.subject == "operator@example.test"
+    assert not hasattr(identity, "roles")
 
 
 def test_oidc_validator_rejects_expired_token() -> None:
@@ -128,7 +121,6 @@ def test_oidc_validator_rejects_expired_token() -> None:
     token = _token(
         private_key,
         tenant_id="00000000-0000-4000-8000-000000000123",
-        roles=[Role.OPERATOR.value],
         expires_delta=timedelta(minutes=-1),
     )
 
@@ -139,25 +131,13 @@ def test_oidc_validator_rejects_expired_token() -> None:
         ).validate(token)
 
 
-def test_oidc_validator_rejects_unknown_role_and_invalid_tenant() -> None:
+def test_oidc_validator_rejects_invalid_tenant_claim() -> None:
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     validator = OidcTokenValidator(
         _settings(),
         jwk_client=FakeJwkClient(private_key.public_key()),
     )
+    invalid_tenant = _token(private_key, tenant_id="not-a-uuid")
 
-    invalid_role = _token(
-        private_key,
-        tenant_id="00000000-0000-4000-8000-000000000123",
-        roles=["Root"],
-    )
-    invalid_tenant = _token(
-        private_key,
-        tenant_id="not-a-uuid",
-        roles=[Role.VIEWER.value],
-    )
-
-    with pytest.raises(AuthenticationError):
-        validator.validate(invalid_role)
     with pytest.raises(AuthenticationError):
         validator.validate(invalid_tenant)
