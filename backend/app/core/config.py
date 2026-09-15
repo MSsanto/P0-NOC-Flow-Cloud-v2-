@@ -21,13 +21,18 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:4200"])
 
-    auth_mode: Literal["demo", "oidc"] = "demo"
+    auth_mode: Literal["demo", "oidc", "cloudflare_access"] = "demo"
     oidc_issuer: str | None = None
     oidc_audience: str | None = None
     oidc_jwks_url: str | None = None
     oidc_algorithms: list[str] = Field(default_factory=lambda: ["RS256"])
     oidc_tenant_claim: str = "tenant_id"
     oidc_leeway_seconds: int = Field(default=30, ge=0, le=300)
+
+    cloudflare_access_team_domain: str | None = None
+    cloudflare_access_audience: str | None = None
+    cloudflare_access_tenant_id: UUID | None = None
+    cloudflare_access_bootstrap_admin_email: str | None = None
 
     demo_tenant_id: UUID = UUID("00000000-0000-4000-8000-000000000001")
     demo_actor_subject: str = "demo-operator@nocflow.local"
