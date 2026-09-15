@@ -11,6 +11,7 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
+import { AuthContextService } from '../../core/auth/auth-context.service';
 import { ApiError } from '../../core/http/api-error';
 import { IncidentApiService } from './incident-api.service';
 import { trimmedLength } from './incident-form.validators';
@@ -61,7 +62,7 @@ import { Incident, IncidentEvent, IncidentEventType } from './incident.model';
             <div class="panel-heading">
               <div>
                 <p class="eyebrow">Operação</p>
-                <h2 id="actions-title">Atualizar incidente</h2>
+                <h2 id="actions-title">Ações do incidente</h2>
               </div>
               @if (!isActive()) {
                 <span class="muted">Incidente encerrado para atualizações operacionais.</span>
@@ -75,31 +76,41 @@ import { Incident, IncidentEvent, IncidentEventType } from './incident.model';
               <p class="feedback error" role="alert">{{ actionError() }}</p>
             }
 
-            @if (isActive()) {
-              <form (submit)="submitUpdate($event)" novalidate>
-                <label for="incident-update">Nova atualização</label>
-                <textarea
-                  id="incident-update"
-                  rows="5"
-                  maxlength="2000"
-                  [formControl]="updateMessage"
-                  aria-describedby="update-help update-error"
-                  placeholder="Ex.: Operadora acionada; protocolo DEMO-123."
-                ></textarea>
-                <div class="field-meta">
-                  <small id="update-help">De 3 a 2000 caracteres após remover espaços extras.</small>
-                  <small>{{ updateMessage.value.trim().length }}/2000</small>
-                </div>
-                @if (updateMessage.invalid && updateMessage.touched) {
-                  <p id="update-error" class="field-error" role="alert">Informe uma atualização com pelo menos 3 caracteres.</p>
-                }
+            @if (!canWrite()) {
+              <p class="muted">Seu perfil possui acesso somente de leitura para este incidente.</p>
+            } @else if (isActive()) {
+              @if (canUpdate()) {
+                <form (submit)="submitUpdate($event)" novalidate>
+                  <label for="incident-update">Nova atualização</label>
+                  <textarea
+                    id="incident-update"
+                    rows="5"
+                    maxlength="2000"
+                    [formControl]="updateMessage"
+                    aria-describedby="update-help update-error"
+                    placeholder="Ex.: Operadora acionada; protocolo DEMO-123."
+                  ></textarea>
+                  <div class="field-meta">
+                    <small id="update-help">De 3 a 2000 caracteres após remover espaços extras.</small>
+                    <small>{{ updateMessage.value.trim().length }}/2000</small>
+                  </div>
+                  @if (updateMessage.invalid && updateMessage.touched) {
+                    <p id="update-error" class="field-error" role="alert">Informe uma atualização com pelo menos 3 caracteres.</p>
+                  }
+                  <div class="actions">
+                    <button type="submit" [disabled]="submittingUpdate()">{{ submittingUpdate() ? 'Salvando…' : 'Adicionar atualização' }}</button>
+                    @if (canNormalize()) {
+                      <button type="button" class="secondary" (click)="openNormalize()">Normalizar incidente</button>
+                    }
+                  </div>
+                </form>
+              } @else if (canNormalize()) {
                 <div class="actions">
-                  <button type="submit" [disabled]="submittingUpdate()">{{ submittingUpdate() ? 'Salvando…' : 'Adicionar atualização' }}</button>
                   <button type="button" class="secondary" (click)="openNormalize()">Normalizar incidente</button>
                 </div>
-              </form>
+              }
 
-              @if (showNormalize()) {
+              @if (showNormalize() && canNormalize()) {
                 <div class="normalize-box" role="region" aria-labelledby="normalize-title">
                   <h3 id="normalize-title">Confirmar normalização</h3>
                   <p>Confirme somente após validar que o serviço foi restabelecido. A ação altera o status para RESOLVED.</p>
@@ -214,6 +225,7 @@ import { Incident, IncidentEvent, IncidentEventType } from './incident.model';
 export class IncidentDetailPageComponent implements OnInit {
   private readonly api = inject(IncidentApiService);
   private readonly route = inject(ActivatedRoute);
+  readonly auth = inject(AuthContextService);
 
   readonly incident = signal<Incident | null>(null);
   readonly timeline = signal<IncidentEvent[]>([]);
@@ -241,6 +253,9 @@ export class IncidentDetailPageComponent implements OnInit {
     const status = this.incident()?.status;
     return status !== undefined && status !== 'RESOLVED' && status !== 'CLOSED';
   });
+  readonly canUpdate = computed(() => this.auth.can('incident:update'));
+  readonly canNormalize = computed(() => this.auth.can('incident:normalize'));
+  readonly canWrite = computed(() => this.canUpdate() || this.canNormalize());
 
   ngOnInit(): void {
     this.load();
@@ -288,7 +303,7 @@ export class IncidentDetailPageComponent implements OnInit {
 
   submitUpdate(event: Event): void {
     event.preventDefault();
-    if (!this.isActive()) return;
+    if (!this.isActive() || !this.canUpdate()) return;
     if (this.updateMessage.invalid) {
       this.updateMessage.markAsTouched();
       return;
@@ -316,7 +331,7 @@ export class IncidentDetailPageComponent implements OnInit {
   }
 
   openNormalize(): void {
-    if (!this.isActive()) return;
+    if (!this.isActive() || !this.canNormalize()) return;
     this.actionError.set(null);
     this.actionSuccess.set(null);
     this.showNormalize.set(true);
@@ -328,7 +343,7 @@ export class IncidentDetailPageComponent implements OnInit {
   }
 
   confirmNormalize(): void {
-    if (!this.isActive()) return;
+    if (!this.isActive() || !this.canNormalize()) return;
     if (this.normalizeNote.invalid) {
       this.normalizeNote.markAsTouched();
       return;

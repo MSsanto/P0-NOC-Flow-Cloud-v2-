@@ -11,6 +11,7 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
+import { AuthContextService } from '../../core/auth/auth-context.service';
 import { ApiError } from '../../core/http/api-error';
 import { IncidentApiService } from './incident-api.service';
 import {
@@ -31,7 +32,9 @@ type SortOption = `${IncidentSortField}:${SortOrder}`;
     <section aria-labelledby="incidents-title">
       <div class="page-header">
         <div><p class="eyebrow">Operação</p><h1 id="incidents-title">Incidentes</h1></div>
-        <a class="primary" routerLink="/incidents/new">Registrar incidente</a>
+        @if (auth.can('incident:create')) {
+          <a class="primary" routerLink="/incidents/new">Registrar incidente</a>
+        }
       </div>
 
       <form class="filters" aria-label="Filtros de incidentes" (submit)="applyFilters($event)">
@@ -96,8 +99,10 @@ type SortOption = `${IncidentSortField}:${SortOrder}`;
       } @else if (incidents().length === 0) {
         <div class="state">
           <strong>Nenhum incidente encontrado.</strong>
-          <span>Ajuste os filtros ou registre um novo incidente.</span>
-          <a routerLink="/incidents/new">Registrar incidente</a>
+          <span>Ajuste os filtros{{ auth.can('incident:create') ? ' ou registre um novo incidente' : '' }}.</span>
+          @if (auth.can('incident:create')) {
+            <a routerLink="/incidents/new">Registrar incidente</a>
+          }
         </div>
       } @else {
         <div class="results-meta" role="status" aria-live="polite">
@@ -175,6 +180,7 @@ type SortOption = `${IncidentSortField}:${SortOrder}`;
 })
 export class IncidentListPageComponent implements OnInit {
   private readonly api = inject(IncidentApiService);
+  readonly auth = inject(AuthContextService);
   private readonly pageSize = 25;
 
   readonly incidents = signal<Incident[]>([]);

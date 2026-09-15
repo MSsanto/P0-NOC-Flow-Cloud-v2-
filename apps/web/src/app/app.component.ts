@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+
+import { AuthContextService } from './core/auth/auth-context.service';
 
 @Component({
   selector: 'app-root',
@@ -12,8 +14,21 @@ import { RouterOutlet } from '@angular/router';
     <div class="app-shell">
       <header class="app-header" role="banner">
         <div>
-          <strong>NOC Flow Cloud v2</strong>
-          <span class="environment-badge" aria-label="Versão alpha">alpha</span>
+          <div class="brand">
+            <strong>NOC Flow Cloud v2</strong>
+            <span class="environment-badge" aria-label="Versão alpha">alpha</span>
+          </div>
+
+          <div class="identity" aria-live="polite">
+            @if (auth.context(); as context) {
+              <span>{{ context.subject }}</span>
+              <span class="role-badge">{{ context.roles.join(', ') }}</span>
+            } @else if (auth.loading()) {
+              <span>Validando acesso…</span>
+            } @else if (auth.error()) {
+              <span>Contexto de acesso indisponível</span>
+            }
+          </div>
         </div>
       </header>
 
@@ -61,15 +76,32 @@ import { RouterOutlet } from '@angular/router';
       margin-inline: auto;
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      justify-content: space-between;
+      gap: 1rem;
     }
 
-    .environment-badge {
+    .brand, .identity {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+
+    .identity {
+      justify-content: flex-end;
+      font-size: 0.85rem;
+      overflow-wrap: anywhere;
+    }
+
+    .environment-badge, .role-badge {
       font-size: 0.75rem;
       line-height: 1;
       padding: 0.25rem 0.5rem;
       border: 1px solid currentColor;
       border-radius: 999px;
+    }
+
+    .environment-badge {
       text-transform: uppercase;
     }
 
@@ -79,6 +111,19 @@ import { RouterOutlet } from '@angular/router';
       padding-block: clamp(1.5rem, 4vw, 3rem);
       outline: none;
     }
+
+    @media (max-width: 40rem) {
+      .app-header > div, .identity {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
   `,
 })
-export class AppComponent {}
+export class AppComponent implements OnInit {
+  readonly auth = inject(AuthContextService);
+
+  ngOnInit(): void {
+    this.auth.load();
+  }
+}

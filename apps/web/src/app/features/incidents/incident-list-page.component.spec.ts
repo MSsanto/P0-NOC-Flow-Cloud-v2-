@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
+import { AppPermission, AuthContextService } from '../../core/auth/auth-context.service';
 import { IncidentApiService } from './incident-api.service';
 import { IncidentListQuery } from './incident-query.model';
 import { IncidentListPageComponent } from './incident-list-page.component';
@@ -35,6 +36,14 @@ class IncidentApiStub {
   }
 }
 
+class AuthContextStub {
+  canCreate = true;
+
+  can(permission: AppPermission): boolean {
+    return permission === 'incident:read' || (permission === 'incident:create' && this.canCreate);
+  }
+}
+
 describe('IncidentListPageComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -42,6 +51,7 @@ describe('IncidentListPageComponent', () => {
       providers: [
         provideRouter([]),
         { provide: IncidentApiService, useClass: IncidentApiStub },
+        { provide: AuthContextService, useClass: AuthContextStub },
       ],
     }).compileComponents();
   });
@@ -108,5 +118,16 @@ describe('IncidentListPageComponent', () => {
 
     expect(api.queries.length).toBe(callsBefore);
     expect(component.error()).toContain('não pode ser posterior');
+  });
+
+  it('hides incident creation from a viewer', () => {
+    const auth = TestBed.inject(AuthContextService) as unknown as AuthContextStub;
+    auth.canCreate = false;
+
+    const fixture = TestBed.createComponent(IncidentListPageComponent);
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).not.toContain('Registrar incidente');
   });
 });

@@ -22,7 +22,8 @@ from app.modules.incidents.presentation.schemas import (
     IncidentUpdateRequest,
 )
 from app.modules.tenancy.application.context import RequestContext
-from app.modules.tenancy.presentation.dependencies import get_request_context
+from app.modules.tenancy.application.security import Permission
+from app.modules.tenancy.presentation.dependencies import require_permission
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 
@@ -44,7 +45,9 @@ def _not_found_error() -> AppError:
 @router.get("", response_model=list[IncidentResponse])
 def list_incidents(
     session: Annotated[Session, Depends(get_db_session)],
-    context: Annotated[RequestContext, Depends(get_request_context)],
+    context: Annotated[
+        RequestContext, Depends(require_permission(Permission.INCIDENT_READ))
+    ],
 ) -> list[IncidentResponse]:
     incidents = _service(session).list_incidents(context.tenant_id)
     return [
@@ -57,12 +60,18 @@ def list_incidents(
     "",
     response_model=IncidentResponse,
     status_code=status.HTTP_201_CREATED,
-    responses={422: {"model": ProblemDetails}},
+    responses={
+        401: {"model": ProblemDetails},
+        403: {"model": ProblemDetails},
+        422: {"model": ProblemDetails},
+    },
 )
 def create_incident(
     payload: IncidentCreateRequest,
     session: Annotated[Session, Depends(get_db_session)],
-    context: Annotated[RequestContext, Depends(get_request_context)],
+    context: Annotated[
+        RequestContext, Depends(require_permission(Permission.INCIDENT_CREATE))
+    ],
 ) -> IncidentResponse:
     try:
         incident = _service(session).create_incident(
@@ -85,6 +94,8 @@ def create_incident(
     "/{incident_id}/updates",
     response_model=IncidentResponse,
     responses={
+        401: {"model": ProblemDetails},
+        403: {"model": ProblemDetails},
         404: {"model": ProblemDetails},
         409: {"model": ProblemDetails},
         422: {"model": ProblemDetails},
@@ -94,7 +105,9 @@ def add_incident_update(
     incident_id: UUID,
     payload: IncidentUpdateRequest,
     session: Annotated[Session, Depends(get_db_session)],
-    context: Annotated[RequestContext, Depends(get_request_context)],
+    context: Annotated[
+        RequestContext, Depends(require_permission(Permission.INCIDENT_UPDATE))
+    ],
 ) -> IncidentResponse:
     try:
         incident = _service(session).add_update(
@@ -120,6 +133,8 @@ def add_incident_update(
     "/{incident_id}/normalize",
     response_model=IncidentResponse,
     responses={
+        401: {"model": ProblemDetails},
+        403: {"model": ProblemDetails},
         404: {"model": ProblemDetails},
         409: {"model": ProblemDetails},
         422: {"model": ProblemDetails},
@@ -129,7 +144,9 @@ def normalize_incident(
     incident_id: UUID,
     payload: IncidentNormalizeRequest,
     session: Annotated[Session, Depends(get_db_session)],
-    context: Annotated[RequestContext, Depends(get_request_context)],
+    context: Annotated[
+        RequestContext, Depends(require_permission(Permission.INCIDENT_NORMALIZE))
+    ],
 ) -> IncidentResponse:
     try:
         incident = _service(session).normalize_incident(
@@ -154,12 +171,18 @@ def normalize_incident(
 @router.get(
     "/{incident_id}/timeline",
     response_model=list[IncidentEventResponse],
-    responses={404: {"model": ProblemDetails}},
+    responses={
+        401: {"model": ProblemDetails},
+        403: {"model": ProblemDetails},
+        404: {"model": ProblemDetails},
+    },
 )
 def get_incident_timeline(
     incident_id: UUID,
     session: Annotated[Session, Depends(get_db_session)],
-    context: Annotated[RequestContext, Depends(get_request_context)],
+    context: Annotated[
+        RequestContext, Depends(require_permission(Permission.INCIDENT_READ))
+    ],
 ) -> list[IncidentEventResponse]:
     try:
         events = _service(session).list_timeline(context.tenant_id, incident_id)
@@ -174,12 +197,18 @@ def get_incident_timeline(
 @router.get(
     "/{incident_id}",
     response_model=IncidentResponse,
-    responses={404: {"model": ProblemDetails}},
+    responses={
+        401: {"model": ProblemDetails},
+        403: {"model": ProblemDetails},
+        404: {"model": ProblemDetails},
+    },
 )
 def get_incident(
     incident_id: UUID,
     session: Annotated[Session, Depends(get_db_session)],
-    context: Annotated[RequestContext, Depends(get_request_context)],
+    context: Annotated[
+        RequestContext, Depends(require_permission(Permission.INCIDENT_READ))
+    ],
 ) -> IncidentResponse:
     incident = _service(session).get_incident(context.tenant_id, incident_id)
     if incident is None:
