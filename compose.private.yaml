@@ -22,10 +22,15 @@ services:
     build:
       context: ./backend
     environment:
-      # Private demo only: the demo identity provider is intentionally limited
-      # to development/test. Production/staging must use NOCFLOW_AUTH_MODE=oidc.
-      NOCFLOW_ENVIRONMENT: development
-      NOCFLOW_AUTH_MODE: demo
+      # CI/local development defaults to the isolated demo identity. For an
+      # authenticated private deployment set staging + cloudflare_access in
+      # the local env file; never commit real Access/Tunnel values.
+      NOCFLOW_ENVIRONMENT: ${NOCFLOW_ENVIRONMENT:-development}
+      NOCFLOW_AUTH_MODE: ${NOCFLOW_AUTH_MODE:-demo}
+      NOCFLOW_CLOUDFLARE_ACCESS_TEAM_DOMAIN: ${NOCFLOW_CLOUDFLARE_ACCESS_TEAM_DOMAIN:-}
+      NOCFLOW_CLOUDFLARE_ACCESS_AUDIENCE: ${NOCFLOW_CLOUDFLARE_ACCESS_AUDIENCE:-}
+      NOCFLOW_CLOUDFLARE_ACCESS_TENANT_ID: ${NOCFLOW_CLOUDFLARE_ACCESS_TENANT_ID:-00000000-0000-4000-8000-000000000001}
+      NOCFLOW_CLOUDFLARE_ACCESS_BOOTSTRAP_ADMIN_EMAIL: ${NOCFLOW_CLOUDFLARE_ACCESS_BOOTSTRAP_ADMIN_EMAIL:-}
       NOCFLOW_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-nocflow}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in a local env file}@postgres:5432/${POSTGRES_DB:-nocflow}
       NOCFLOW_CORS_ORIGINS: '[]'
       NOCFLOW_LOG_LEVEL: INFO
