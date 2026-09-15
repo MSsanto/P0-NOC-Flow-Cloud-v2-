@@ -39,5 +39,17 @@ jobs:
           environment = cloudflared.get('environment', {})
           assert environment.get('TUNNEL_TOKEN'), 'cloudflared must receive TUNNEL_TOKEN from environment'
 
+          web_networks = services['web'].get('networks', {})
+          cloudflared_networks = cloudflared.get('networks', {})
+          assert set(web_networks) & set(cloudflared_networks), 'web and cloudflared must share a Docker network'
+
+          aliases = {
+              alias
+              for network in web_networks.values()
+              if isinstance(network, dict)
+              for alias in network.get('aliases', [])
+          }
+          assert 'nocflow.internal' in aliases, 'web must expose the private Docker alias nocflow.internal'
+
           print('Private demo Compose exposure model OK')
           PY

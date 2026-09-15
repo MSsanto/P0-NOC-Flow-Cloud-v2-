@@ -2,96 +2,119 @@
 
 ## Objetivo
 
-Disponibilizar o NOC Flow Cloud v2 remotamente para demonstração privada sem expor portas do host para Internet e sem tratar o ambiente como produção.
+Disponibilizar o NOC Flow Cloud v2 remotamente para demonstração **sem publicar a aplicação na Internet** e sem tratar o ambiente como produção.
 
-O desenho usa:
+O modo atual usa:
 
 - Docker Compose;
 - `cloudflared` como conexão de saída;
 - Cloudflare Tunnel;
-- Cloudflare Access como camada de autenticação antes da aplicação;
+- Cloudflare One Client (WARP) no dispositivo autorizado;
+- hostname privado `nocflow.internal`;
+- Cloudflare Access/Gateway para restringir acesso;
 - dados exclusivamente sintéticos;
 - identidade demo do NOC Flow, permitida somente em `development`/`test`.
+
+Cloudflare Tunnel é outbound-only. Nenhuma porta de entrada do host precisa ser aberta.
 
 ## Limite de segurança
 
 Este ambiente é **private demo**, não produção.
 
-O provider de identidade atual do NOC Flow é deliberadamente bloqueado fora de `development`/`test`. Portanto, não alterar `NOCFLOW_ENVIRONMENT` para `production` apenas para hospedar esta demo. Produção real continua dependendo de OIDC/RBAC e demais gates do roadmap.
+O provider de identidade atual do NOC Flow é deliberadamente bloqueado fora de `development`/`test`. Não alterar `NOCFLOW_ENVIRONMENT` para `production` apenas para hospedar esta demo. Produção real continua dependendo de OIDC/RBAC e dos gates previstos no roadmap.
 
-## Arquitetura
+## Arquitetura atual — sem domínio público
 
 ```text
-Browser autorizado
+Notebook autorizado
        |
-       v
-Cloudflare Access
+Cloudflare One Client / WARP
        |
-       v
+Cloudflare Access + Gateway
+       |
 Cloudflare Tunnel
        |
-       v
 cloudflared (Docker)
        |
        v
-web :80 (Nginx)
-   | /api/v1
-   v
-backend :8000
-       |
-       v
-PostgreSQL :5432
+nocflow.internal -> web :80 (Nginx)
+                         | /api/v1
+                         v
+                    backend :8000
+                         |
+                         v
+                    PostgreSQL :5432
 ```
 
-Nenhum dos serviços `postgres`, `backend` ou `web` publica `ports:` em `compose.private.yaml`. O único caminho esperado de entrada é o túnel.
+Nenhum dos serviços `postgres`, `backend` ou `web` publica `ports:` em `compose.private.yaml`.
+
+O serviço `web` possui o alias Docker `nocflow.internal`. Como `cloudflared` está na mesma rede Docker, o hostname privado pode ser resolvido pelo DNS interno do Docker para alcançar o Nginx.
 
 ## Preparação local
 
-Copie `.env.example` para um arquivo local ignorado pelo Git, por exemplo `.env.private`.
+Copie `.env.example` para um arquivo local ignorado pelo Git:
 
-Gere uma senha forte para `POSTGRES_PASSWORD` e nunca reutilize a senha de desenvolvimento padrão.
+```bash
+cp .env.example .env.private
+```
+
+No PowerShell:
+
+```powershell
+Copy-Item .env.example .env.private
+```
+
+Gere uma senha forte para `POSTGRES_PASSWORD`.
 
 Não cole nem versione o token do Cloudflare Tunnel. O token concede capacidade para executar uma réplica do túnel e deve ser tratado como secret.
 
-## Ordem segura no Cloudflare
+## Configuração Cloudflare atual — private network
 
-A ordem é importante: configure o Access **antes** de publicar a rota do túnel.
+### 1. Ativar Zero Trust
 
-### 1. Criar a aplicação no Cloudflare Access
-
-No Cloudflare Zero Trust:
-
-1. `Access controls` → `Applications`;
-2. criar aplicação `Self-hosted and private`;
-3. adicionar o hostname que será usado pelo NOC Flow;
-4. criar uma política `Allow` restrita somente aos usuários autorizados;
-5. usar um IdP configurado ou e-mail OTP;
-6. manter o comportamento deny-by-default;
-7. configurar sessão curta para ambiente de demonstração.
-
-Se for usado um hostname público protegido por Access, o DNS pode ser resolvível publicamente, mas a aplicação não é entregue sem autenticação/autorização no Access.
-
-Para um modo estritamente sem DNS público, usar a variante de private network do Cloudflare One/One Client. Essa opção exige o cliente Cloudflare One no dispositivo e configuração de rota privada.
+No dashboard Cloudflare, inicialize o Cloudflare Zero Trust para a conta e defina o nome da organização.
 
 ### 2. Criar o Tunnel
-
-No Cloudflare Dashboard:
 
 1. `Networking` → `Tunnels`;
 2. criar `noc-flow-private-demo`;
 3. selecionar Docker como método de execução;
-4. copiar apenas o token para o arquivo local `.env.private`;
+4. copiar somente o token para `.env.private` como `CLOUDFLARE_TUNNEL_TOKEN`;
 5. nunca adicionar o token ao GitHub, Trello, documentação ou logs.
 
-### 3. Configurar a rota
+Não adicionar uma rota `Published application` enquanto o objetivo for manter o NOC Flow fora da Internet pública.
 
-Para o modo de hostname protegido por Access, configure o serviço de origem do Tunnel como:
+### 3. Adicionar rota de hostname privado
 
-```text
-http://web:80
-```
+No Tunnel:
 
-`cloudflared` e `web` compartilham a rede interna criada pelo Docker Compose, portanto `web` é resolvido pelo DNS interno do Docker.
+1. abrir `Routes`;
+2. adicionar `Private hostname`;
+3. hostname: `nocflow.internal`;
+4. salvar a rota apontando para o Tunnel `noc-flow-private-demo`.
+
+Para hostname privado, o dispositivo cliente precisa enviar DNS e tráfego pela rede Cloudflare One. O Cloudflare Gateway atribui um endereço intermediário e encaminha a conexão para o Tunnel.
+
+### 4. Restringir acesso
+
+Criar uma aplicação Access para o hostname privado `nocflow.internal` e permitir somente usuários explicitamente autorizados.
+
+Configuração inicial recomendada:
+
+- Allow: somente o e-mail do proprietário do projeto;
+- nenhum `Everyone`;
+- nenhum `Bypass`;
+- política de bloqueio para os demais;
+- sessão curta;
+- revisar Access/Gateway logs após os testes.
+
+### 5. Instalar Cloudflare One Client
+
+Instalar o Cloudflare One Client no dispositivo que acessará o NOC Flow e fazer o enrollment na organização Zero Trust.
+
+Usar o modo de tráfego/DNS compatível com private hostname routing e garantir que o tráfego destinado aos endereços iniciais resolvidos pelo Gateway não esteja excluído pelas regras de Split Tunnel.
+
+A referência oficial deve ser seguida para qualquer ajuste de Split Tunnel, porque essa configuração depende do perfil do dispositivo.
 
 ## Subir o private demo
 
@@ -114,6 +137,14 @@ Esperado:
 
 O host não deve escutar as portas `4200`, `8000` ou `5432` por causa deste Compose.
 
+No dispositivo inscrito no Cloudflare One, testar:
+
+```text
+http://nocflow.internal
+```
+
+O hostname não depende de DNS público nem de domínio registrado.
+
 ## Parar
 
 ```bash
@@ -126,34 +157,49 @@ Para remover também os dados sintéticos persistidos:
 docker compose --env-file .env.private -f compose.private.yaml down -v
 ```
 
-## Política de acesso recomendada
+## Evolução quando houver domínio próprio
 
-Para a primeira demo:
+O private network atual não será descartado. Quando um domínio for registrado e adicionado à Cloudflare, poderemos publicar somente os projetos aprovados e manter ambientes internos privados.
 
-- `Include`: somente os e-mails explicitamente autorizados;
-- nenhum `Bypass`;
-- nenhum `Everyone`;
-- OTP ou IdP;
-- sessão curta;
-- revisar Access logs após testes.
+Estrutura sugerida:
+
+```text
+seudominio.com              -> portfólio principal
+nocflow.seudominio.com      -> NOC Flow Cloud v2
+careerops.seudominio.com    -> CareerOps, quando aprovado para publicação
+lab.seudominio.com          -> projetos/laboratórios selecionados
+dev.seudominio.com          -> opcional, protegido por Access
+```
+
+Para o NOC Flow, a futura mudança será majoritariamente de entrada:
+
+```text
+hoje:    nocflow.internal -> WARP -> Tunnel -> web
+futuro:  nocflow.seudominio.com -> Access -> Tunnel -> web
+```
+
+Angular, FastAPI e PostgreSQL permanecem atrás do mesmo Nginx e não precisam ser reescritos apenas por causa do domínio.
+
+Cloudflare exige um domínio conectado à conta para usar `Published application` com hostname público. Por isso esse passo fica para a fase em que o domínio for adquirido.
 
 ## O que NÃO fazer
 
-- não expor `backend:8000` diretamente na Internet;
+- não adicionar `Published application` enquanto quisermos zero exposição pública;
+- não expor `backend:8000` diretamente;
 - não expor PostgreSQL;
-- não usar Quick Tunnel (`trycloudflare.com`) para a demo persistente;
+- não usar Quick Tunnel (`trycloudflare.com`) como ambiente persistente;
 - não colocar token do Tunnel no repositório;
 - não adicionar dados corporativos reais;
 - não chamar este ambiente de produção;
-- não desabilitar Access para simplificar a demonstração.
+- não liberar política `Everyone` para simplificar a demo.
 
 ## Gate antes de considerar o ambiente utilizável
 
-- Access criado e deny-by-default;
-- usuário não autorizado recebe bloqueio antes do NOC Flow;
-- usuário autorizado consegue autenticar;
 - Tunnel saudável;
-- aplicação abre via HTTPS no endereço Cloudflare;
+- `nocflow.internal` configurado como private hostname;
+- Cloudflare One Client inscrito no dispositivo;
+- usuário autorizado consegue acessar;
+- usuário não autorizado é bloqueado;
 - criação/listagem/detalhe/update/normalização/timeline funcionam;
 - filtros/paginação funcionam;
 - nenhuma porta da aplicação/banco está publicada pelo Compose privado;
