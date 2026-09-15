@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
+import { AppPermission, AuthContextService } from '../../core/auth/auth-context.service';
 import { IncidentApiService } from './incident-api.service';
 import { IncidentDetailPageComponent } from './incident-detail-page.component';
 import {
@@ -62,6 +63,14 @@ class IncidentApiStub {
   }
 }
 
+class AuthContextStub {
+  writable = true;
+
+  can(permission: AppPermission): boolean {
+    return permission === 'incident:read' || this.writable;
+  }
+}
+
 describe('IncidentDetailPageComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -69,6 +78,7 @@ describe('IncidentDetailPageComponent', () => {
       providers: [
         provideRouter([]),
         { provide: IncidentApiService, useClass: IncidentApiStub },
+        { provide: AuthContextService, useClass: AuthContextStub },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: convertToParamMap({ id: 'inc-1' }) } },
@@ -82,7 +92,9 @@ describe('IncidentDetailPageComponent', () => {
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.textContent).toContain('Atualizar incidente');
+    expect(element.textContent).toContain('Ações do incidente');
+    expect(element.textContent).toContain('Adicionar atualização');
+    expect(element.textContent).toContain('Normalizar incidente');
     expect(element.textContent).toContain('Timeline');
     expect(element.textContent).toContain('Incidente criado');
     expect(element.textContent).toContain('demo-operator');
@@ -121,5 +133,19 @@ describe('IncidentDetailPageComponent', () => {
     expect(component.incident()?.status).toBe('RESOLVED');
     expect(component.isActive()).toBe(false);
     expect(component.showNormalize()).toBe(false);
+  });
+
+  it('keeps a viewer read-only while preserving timeline visibility', () => {
+    const auth = TestBed.inject(AuthContextService) as unknown as AuthContextStub;
+    auth.writable = false;
+
+    const fixture = TestBed.createComponent(IncidentDetailPageComponent);
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('acesso somente de leitura');
+    expect(element.textContent).not.toContain('Adicionar atualização');
+    expect(element.textContent).not.toContain('Normalizar incidente');
+    expect(element.textContent).toContain('Timeline');
   });
 });
