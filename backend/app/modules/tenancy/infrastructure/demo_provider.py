@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.modules.tenancy.application.context import RequestContext
+from app.modules.tenancy.application.security import Role
 from app.modules.tenancy.infrastructure.models import TenantModel
 
 
@@ -30,4 +31,5 @@ def resolve_demo_context(session: Session, settings: Settings) -> RequestContext
     return RequestContext(
         tenant_id=settings.demo_tenant_id,
         actor_subject=settings.demo_actor_subject,
+        roles=frozenset({Role.ADMIN}),
     )
