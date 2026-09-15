@@ -167,9 +167,9 @@ No private demo existe um bootstrap restrito:
 
 1. o request precisa ter JWT Cloudflare Access válido;
 2. o e-mail validado precisa coincidir exatamente com `NOCFLOW_CLOUDFLARE_ACCESS_BOOTSTRAP_ADMIN_EMAIL`;
-3. o tenant configurado precisa existir e estar ativo;
+3. se o tenant configurado ainda não existir, ele é criado como `private-demo`; se já existir, precisa estar ativo;
 4. o ambiente não pode ser `production`;
-5. o backend cria `user + membership(Admin)` se ainda não existirem.
+5. o backend cria `user + membership(Admin)` se ainda não existirem; usuário ou tenant inativos nunca são reativados pelo bootstrap.
 
 Após o primeiro login bem-sucedido e a criação da membership, remover da configuração local:
 
