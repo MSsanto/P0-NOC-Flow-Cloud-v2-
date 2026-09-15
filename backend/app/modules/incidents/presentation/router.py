@@ -60,7 +60,11 @@ def list_incidents(
     "",
     response_model=IncidentResponse,
     status_code=status.HTTP_201_CREATED,
-    responses={401: {"model": ProblemDetails}, 403: {"model": ProblemDetails}, 422: {"model": ProblemDetails}},
+    responses={
+        401: {"model": ProblemDetails},
+        403: {"model": ProblemDetails},
+        422: {"model": ProblemDetails},
+    },
 )
 def create_incident(
     payload: IncidentCreateRequest,
@@ -167,7 +171,11 @@ def normalize_incident(
 @router.get(
     "/{incident_id}/timeline",
     response_model=list[IncidentEventResponse],
-    responses={401: {"model": ProblemDetails}, 403: {"model": ProblemDetails}, 404: {"model": ProblemDetails}},
+    responses={
+        401: {"model": ProblemDetails},
+        403: {"model": ProblemDetails},
+        404: {"model": ProblemDetails},
+    },
 )
 def get_incident_timeline(
     incident_id: UUID,
@@ -189,7 +197,11 @@ def get_incident_timeline(
 @router.get(
     "/{incident_id}",
     response_model=IncidentResponse,
-    responses={401: {"model": ProblemDetails}, 403: {"model": ProblemDetails}, 404: {"model": ProblemDetails}},
+    responses={
+        401: {"model": ProblemDetails},
+        403: {"model": ProblemDetails},
+        404: {"model": ProblemDetails},
+    },
 )
 def get_incident(
     incident_id: UUID,
