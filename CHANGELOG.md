@@ -24,6 +24,13 @@ Este projeto segue a estrutura do Keep a Changelog para registrar incrementos re
 - smoke específico da Sprint 2 atravessando Nginx → FastAPI → PostgreSQL;
 - testes de integração HTTP contra PostgreSQL real;
 - baseline AppSec e headers de segurança do Nginx;
+- autenticação por OIDC/JWT com validação de issuer, audience, assinatura e claims obrigatórias;
+- integração da demo privada com Cloudflare Access;
+- RBAC server-side com Admin, Supervisor, Operator e Viewer;
+- memberships internas e isolamento cross-tenant;
+- endpoint autenticado `GET /api/v1/auth/me`;
+- terceira migration Alembic para usuários e memberships;
+- testes unitários e de integração de autenticação, permissões e isolamento por tenant.
 - roteiros reproduzíveis de homologação das candidatas `v0.1.0-alpha` e `v0.2.0-alpha`.
 
 ### Fixed
@@ -46,8 +53,9 @@ Este projeto segue a estrutura do Keep a Changelog para registrar incrementos re
 - CORS usa allowlist;
 - containers e proxy recebem baseline de hardening;
 - `pip-audit` e `npm audit` fazem parte do pipeline;
-- payloads com campos de autoridade forjados são rejeitados nos fluxos cobertos.
+- payloads com campos de autoridade forjados são rejeitados nos fluxos cobertos;
+- tokens OIDC inválidos, memberships ausentes e tentativas cross-tenant retornam 401/403 sem confiar em autorização do frontend.
 
 ### Note
 
-A candidata atual é `v0.2.0-alpha`, destinada a **ambiente local/teste**. OIDC/RBAC ainda não foram implementados e nenhum deploy público/produção está autorizado. Não há tag/GitHub Release publicada neste estágio.
+A candidata atual é `v0.3.0-beta`, destinada a ambiente local e demo privada protegida por Cloudflare Access/OIDC. OIDC, RBAC e isolamento multi-tenant estão implementados e validados no CI; nenhum deploy público/produção está autorizado. Não há tag/GitHub Release publicada neste estágio.
