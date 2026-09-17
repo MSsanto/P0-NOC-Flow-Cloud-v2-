@@ -1,6 +1,6 @@
 # Sprint 003 — Auth, RBAC & Multi-Tenancy
 
-**Status:** Planejamento futuro  
+**Status:** Concluída tecnicamente em 15/09/2026; candidata à homologação  
 **Duração planejada:** 2 semanas  
 **Release alvo:** `v0.3.0-beta`  
 **Sprint Goal:** implementar identidade, autorização server-side e isolamento seguro entre tenants.
@@ -53,3 +53,34 @@ TASK-PO-S3-01 matriz RBAC; TASK-ARC-S3-01 OIDC/tenant context; TASK-UX-S3-01 log
 - 401/403 tratados corretamente;
 - testes negativos de segurança verdes;
 - release homologada.
+
+
+## Evidência de implementação
+
+Commit de integração em `main`: `12bee12f6cacb2265fbe40306cd88c8bcc6fc2a5`.
+
+Entregas verificadas:
+
+- provider local sintético restrito a `development`/`test`;
+- validação OIDC/JWT genérica com JWKS, issuer e audience;
+- integração com Cloudflare Access para demo privada;
+- endpoint `GET /api/v1/auth/me`;
+- perfis Admin, Supervisor, Operator e Viewer;
+- autorização server-side por permission;
+- usuários e memberships persistidos por Alembic;
+- isolamento cross-tenant e testes negativos;
+- contexto de autenticação consumido pelo Angular;
+- stack privada validada por `compose.private.yaml`.
+
+Gates verdes no commit de integração:
+
+- `CI`;
+- `Sprint 2 Functional Smoke`;
+- `Private Demo Compose`.
+
+## Pendências de homologação
+
+- executar roteiro manual de 401, 403 e sessão expirada no ambiente privado;
+- registrar evidência visual da experiência de acesso;
+- atualizar a versão/tag somente após homologação;
+- manter deploy público bloqueado até o hardening da Sprint 6.
