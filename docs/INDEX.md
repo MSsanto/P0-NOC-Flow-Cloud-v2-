@@ -15,6 +15,8 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 - [Sprint 1 — resumo e evidências](sprints/SPRINT_01.md)
 - [Sprint 002 — contrato detalhado e fechamento](scrum/SPRINT_002.md)
 - [Sprint 2 — resumo e evidências](sprints/SPRINT_02.md)
+- [Sprint 003 — contrato detalhado e fechamento técnico](scrum/SPRINT_003.md)
+- [Sprint 3 — resumo e evidências](sprints/SPRINT_03.md)
 - [Retrospectives](scrum/RETROSPECTIVES.md)
 
 ## Release e homologação
