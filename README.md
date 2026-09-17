@@ -2,8 +2,8 @@
 
 > Plataforma web de portfólio para o ciclo operacional de incidentes em NOC, construída com Angular, FastAPI, PostgreSQL, Docker e GitHub Actions.
 
-**Status:** 🟢 Sprint 2 — Incidentes & Timeline concluída tecnicamente  
-**Release candidata:** `v0.2.0-alpha`  
+**Status:** 🟢 Sprint 3 — Auth, RBAC & Multi-Tenancy concluída tecnicamente  
+**Release candidata:** `v0.3.0-beta`  
 **Autor:** Matheus Santo  
 **Repositório:** `MSsanto/P0-NOC-Flow-Cloud-v2-`
 
@@ -21,9 +21,12 @@ O produto já permite:
 - paginar resultados pela consulta avançada;
 - persistir dados em PostgreSQL e executar migrations Alembic;
 - executar frontend, backend e banco via Docker Compose;
-- validar lint/type-check, testes, builds, audits e smoke full-stack no GitHub Actions.
+- validar lint/type-check, testes, builds, audits e smoke full-stack no GitHub Actions;
+- autenticar a demo privada por Cloudflare Access ou OIDC genérico;
+- aplicar RBAC server-side com perfis Admin, Supervisor, Operator e Viewer;
+- resolver memberships internas e bloquear acesso cross-tenant.
 
-A identidade continua **somente demo em `development`/`test`**. Deploy público/produção permanece bloqueado até autenticação e autorização reais.
+A execução local mantém um provider sintético isolado para desenvolvimento. A demo privada já suporta identidade confiável por **Cloudflare Access** ou **OIDC genérico**, com autorização server-side, memberships internas e isolamento por tenant. Produção pública continua bloqueada até homologação da candidata `v0.3.0-beta`.
 
 ## Stack executável
 
@@ -32,6 +35,7 @@ A identidade continua **somente demo em `development`/`test`**. Deploy público/
 | Frontend | Angular 22 + TypeScript |
 | API | FastAPI + Python 3.12 |
 | Persistência | PostgreSQL 17 + SQLAlchemy + Alembic |
+| Identidade | OIDC/JWT + Cloudflare Access + RBAC |
 | Testes | Pytest + Angular Testing/Vitest |
 | Contêineres | Docker + Docker Compose |
 | Web/Proxy | Nginx |
@@ -123,6 +127,7 @@ npm run build
 ## API implementada
 
 ```text
+GET  /api/v1/auth/me
 GET  /api/v1/incidents
 POST /api/v1/incidents
 GET  /api/v1/incidents/query
@@ -178,11 +183,11 @@ Normalização:
 
 ## Segurança da alpha
 
-A alpha inclui tenant scoping server-side, Pydantic/constraints, SQLAlchemy parametrizado, CORS allowlist, Problem Details, backend não-root, headers de segurança no Nginx e audits de dependências no CI.
+A candidata beta inclui validação de tokens OIDC/JWT, integração com Cloudflare Access, memberships internas, RBAC server-side, tenant scoping, Pydantic/constraints, SQLAlchemy parametrizado, CORS allowlist, Problem Details, backend não-root, headers de segurança no Nginx e audits de dependências no CI.
 
 A timeline é append-only no fluxo suportado e as ações validam o estado do incidente. Recursos fora do tenant ativo não são expostos pela API suportada.
 
-A `v0.2.0-alpha` é homologável **somente como ambiente local/teste**. OIDC, RBAC e identidade confiável pertencem ao incremento posterior; produção permanece bloqueada por design.
+A `v0.3.0-beta` é homologável como ambiente local e demo privada protegida. O provider demo é restrito a `development`/`test`; ambientes protegidos exigem identidade externa validada. Produção pública permanece bloqueada por design até a homologação e o hardening final.
 
 ## Arquitetura resumida
 
@@ -217,6 +222,7 @@ A documentação completa está em [`docs/INDEX.md`](docs/INDEX.md).
 Destaques:
 
 - [Sprint 2 — evidências](docs/sprints/SPRINT_02.md)
+- [Sprint 3 — evidências](docs/sprints/SPRINT_03.md)
 - [Roteiro de homologação da v0.2.0-alpha](docs/releases/V0.2.0-ALPHA-HOMOLOGATION.md)
 - [Contrato executado de incidentes na Sprint 2](docs/api/SPRINT_02-INCIDENTS.md)
 - [Contrato geral da API](docs/06-API-CONTRACT.md)
@@ -230,7 +236,7 @@ Destaques:
 
 - **Sprint 1:** fundação executável e CRUD inicial de incidentes — concluída;
 - **Sprint 2:** atualizações, normalização, timeline e filtros — concluída tecnicamente;
-- **Sprint 3:** autenticação, RBAC e multi-tenancy confiável;
+- **Sprint 3:** autenticação, RBAC e multi-tenancy confiável — concluída tecnicamente;
 - **Sprint 4:** dashboard e passagem de turno;
 - **Sprint 5:** auditoria e observabilidade;
 - **Sprint 6:** Azure e release v1.0.
