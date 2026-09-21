@@ -203,3 +203,25 @@ Executar em PostgreSQL real:
 - security/dependency audits;
 - smoke full-stack do fluxo Sprint 4;
 - evidência manual de teclado/401/403/409 e snapshot imutável.
+
+
+## Evidência executada — Sprint 4
+
+No PR de implementação da Sprint 4 foram executados com sucesso:
+
+- Ruff;
+- Alembic upgrade em PostgreSQL 17;
+- pytest incluindo testes de shift, metadata, OpenAPI e operações;
+- `pip-audit`;
+- readiness da API;
+- type-check Angular;
+- testes unitários Angular;
+- production build;
+- `npm audit`;
+- Frontend Foundation;
+- Cloudflare Private UI dry-run;
+- Private Demo Compose;
+- Sprint 2 Functional Smoke de regressão;
+- Sprint 4 Functional Smoke ponta a ponta.
+
+O Sprint 4 Functional Smoke valida criação de incidente, dashboard, preview, finalização, histórico/latest, normalização posterior, imutabilidade do snapshot e rejeição de `tenant_id` forjado.
