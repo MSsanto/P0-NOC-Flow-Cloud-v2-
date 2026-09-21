@@ -1640,6 +1640,54 @@ async function routeApi(request, env, requestId) {
     );
   }
 
+  if (path === `${API_PREFIX}/dashboard/summary`) {
+    if (request.method !== "GET") methodNotAllowed();
+    return jsonResponse(await dashboardSummary(env, context), requestId);
+  }
+
+  if (path === `${API_PREFIX}/handovers/preview`) {
+    if (request.method !== "GET") methodNotAllowed();
+    return jsonResponse(await handoverPreview(env, context), requestId);
+  }
+
+  if (path === `${API_PREFIX}/handovers/latest`) {
+    if (request.method !== "GET") methodNotAllowed();
+    return jsonResponse(await latestHandover(env, context), requestId);
+  }
+
+  if (path === `${API_PREFIX}/handovers`) {
+    if (request.method === "GET") {
+      return jsonResponse(await handoverHistory(env, context, url), requestId);
+    }
+    if (request.method === "POST") {
+      return jsonResponse(
+        await finalizeHandover(env, context, request),
+        requestId,
+        201,
+      );
+    }
+    methodNotAllowed();
+  }
+
+  const handoverDetailMatch = path.match(/^\/api\/v1\/handovers\/([^/]+)$/);
+  if (handoverDetailMatch) {
+    if (request.method !== "GET") methodNotAllowed();
+    const handoverId = handoverDetailMatch[1];
+    if (!validIncidentId(handoverId)) {
+      throw problem(
+        422,
+        "Request validation failed",
+        "handover_id must be a valid UUID.",
+        "REQUEST_VALIDATION_FAILED",
+        "request-validation-failed",
+      );
+    }
+    return jsonResponse(
+      await getRequiredHandover(env, context, handoverId),
+      requestId,
+    );
+  }
+
   if (path === `${API_PREFIX}/incidents/query`) {
     if (request.method !== "GET") methodNotAllowed();
     return jsonResponse(await listIncidents(env, context, url), requestId);
