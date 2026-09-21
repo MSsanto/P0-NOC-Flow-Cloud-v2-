@@ -112,7 +112,7 @@ O sistema não armazena senha. O vínculo com o provedor de identidade é feito 
 |---|---|
 | `tenant_id` | PK composta; FK para `tenants` |
 | `user_id` | PK composta; FK para `users` |
-| `role` | `Admin | Supervisor | Operator | Viewer` |
+| `role` | `Admin`, `Supervisor`, `Operator` ou `Viewer` |
 | `is_active` | membership precisa estar ativa para conceder contexto |
 | `created_at` / `updated_at` | timestamps de auditoria básica |
 
@@ -318,7 +318,7 @@ UNIQUE (handover_id, incident_id)
 
 ### Migration
 
-A migration da Sprint 4 deve ser aditiva: criar as duas tabelas, constraints e índices sem alterar colunas existentes de incidentes. Não exige backfill.
+A migration da Sprint 4 deve ser aditiva: criar as duas tabelas, constraints e índices sem alterar colunas existentes de incidentes. As novas tabelas não exigem backfill; a extensão de configuração de turno em `tenants` exige backfill explícito antes de aplicar `NOT NULL`.
 
 
 ### Extensão planejada de `tenants` para cálculo de turno
