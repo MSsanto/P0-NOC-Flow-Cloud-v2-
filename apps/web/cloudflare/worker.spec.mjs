@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   ApiProblem,
+  calculateShiftWindow,
+  parseHandoverListQuery,
   parseIncidentListQuery,
   permissionsForRole,
+  validateHandoverFinalize,
   validateIncidentCreate,
   validateIncidentNormalize,
   validateIncidentUpdate,
@@ -101,15 +104,75 @@ describe("Cloudflare private demo contract helpers", () => {
   });
 
   it("keeps RBAC parity with the canonical backend", () => {
-    expect(permissionsForRole("Viewer")).toEqual(["incident:read"]);
+    expect(permissionsForRole("Viewer")).toEqual([
+      "incident:read",
+      "handover:read",
+    ]);
     expect(permissionsForRole("Operator")).toEqual([
       "incident:read",
       "incident:create",
       "incident:update",
       "incident:normalize",
+      "handover:read",
+      "handover:finalize",
     ]);
-    expect(permissionsForRole("Admin")).toHaveLength(4);
+    expect(permissionsForRole("Admin")).toHaveLength(6);
     expect(permissionsForRole("Unknown")).toEqual([]);
+  });
+
+  it("validates handover observations and rejects forged authority", () => {
+    expect(validateHandoverFinalize({ observations: "  Plantão estável.  " })).toEqual({
+      observations: "Plantão estável.",
+    });
+    expect(validateHandoverFinalize({ observations: "" })).toEqual({
+      observations: null,
+    });
+    expect(() =>
+      validateHandoverFinalize({
+        observations: "Plantão estável.",
+        tenant_id: "forged",
+      }),
+    ).toThrowError(
+      expect.objectContaining({
+        code: "REQUEST_VALIDATION_FAILED",
+        status: 422,
+      }),
+    );
+  });
+
+  it("parses handover history pagination", () => {
+    const url = new URL(
+      "https://demo.invalid/api/v1/handovers?page=2&page_size=10",
+    );
+    expect(parseHandoverListQuery(url)).toEqual({ page: 2, page_size: 10 });
+  });
+
+  it("calculates the current shift window in UTC", () => {
+    expect(
+      calculateShiftWindow({
+        timezone: "UTC",
+        shift_start_local: "06:00:00",
+        shift_duration_minutes: 720,
+        now: new Date("2026-09-21T15:00:00Z"),
+      }),
+    ).toEqual({
+      window_start: "2026-09-21T06:00:00.000Z",
+      window_end: "2026-09-21T18:00:00.000Z",
+    });
+  });
+
+  it("calculates a shift window with an IANA timezone", () => {
+    expect(
+      calculateShiftWindow({
+        timezone: "America/Sao_Paulo",
+        shift_start_local: "06:00:00",
+        shift_duration_minutes: 720,
+        now: new Date("2026-09-21T15:00:00Z"),
+      }),
+    ).toEqual({
+      window_start: "2026-09-21T09:00:00.000Z",
+      window_end: "2026-09-21T21:00:00.000Z",
+    });
   });
 
   it("exposes typed API validation failures", () => {
