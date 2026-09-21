@@ -1,7 +1,7 @@
 # Sprint 4 — resumo e evidências
 
 **Incremento:** Dashboard & Passagem de Turno  
-**Estado:** concluído tecnicamente em 21/09/2026; aguardando homologação manual  
+**Estado:** concluída e homologada em 21/09/2026  
 **Release candidata:** `v0.4.0-beta`
 
 ## Resultado
@@ -98,8 +98,10 @@ A rodada validada também comprova:
 - consultas de handover são tenant-scoped;
 - observações são validadas como texto e não são autoridade para itens.
 
-## O que ainda exige humano
+## Homologação final
 
-Somente a homologação manual da experiência: leitura visual do Dashboard/Passagem, clareza da confirmação de snapshot imutável, comportamento de foco/teclado e acesso real à demo privada protegida.
+**APROVADA — DEMO PRIVADA em 21/09/2026.**
 
-O roteiro está em `docs/releases/V0.4.0-BETA-HOMOLOGATION.md` e a execução humana está rastreada na issue #53.
+A validação humana confirmou Dashboard, fluxo de passagem de turno, teclado/foco e perímetro Cloudflare Access sem BLOCKER/MAJOR.
+
+Evidência: issue #53 e `docs/releases/V0.4.0-BETA-HOMOLOGATION.md`.
