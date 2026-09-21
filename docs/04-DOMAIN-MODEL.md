@@ -96,10 +96,42 @@ Nome, ordem, prazo alvo e regras visuais configuráveis.
 Template versionado por tipo e tenant.
 
 ### Shift
-Janela operacional calculada a partir da configuração do tenant.
+Na Sprint 4, `Shift` é uma janela calculada a partir da timezone/configuração do tenant e não uma entidade persistente. Persistência própria fica adiada até existir necessidade adicional comprovada.
 
 ### Handover
 Snapshot versionado produzido para uma troca de turno.
+
+Campos conceituais da Sprint 4:
+
+- id;
+- tenant_id;
+- window_start;
+- window_end;
+- version;
+- observations;
+- finalized_by_subject;
+- finalized_at;
+- created_at.
+
+Um handover finalizado é imutável. Correções ou complementos geram nova versão para a mesma janela.
+
+### HandoverItem
+Item imutável do snapshot associado a um incidente.
+
+Campos conceituais da Sprint 4:
+
+- id;
+- handover_id;
+- incident_id;
+- title_snapshot;
+- affected_resource_snapshot;
+- severity_snapshot;
+- status_snapshot;
+- started_at_snapshot;
+- last_event_message_snapshot opcional;
+- last_event_at_snapshot opcional.
+
+O item guarda somente campos disponíveis no domínio executável. Protocolos, próximo passo e outras informações estruturadas só entram quando seus respectivos incrementos existirem.
 
 ### AuditEvent
 Registro de segurança/governança separado da timeline de negócio.
@@ -110,6 +142,19 @@ Registro de segurança/governança separado da timeline de negócio.
 2. somente transições permitidas podem mudar estado;
 3. resolver exige `resolved_at` e registro de resolução;
 4. reabrir exige justificativa;
-5. handover finalizado não é alterado; nova edição gera versão;
-6. template renderizado preserva conteúdo final e versão do template;
-7. IDs externos de integração não podem colidir dentro do mesmo tenant/provedor.
+5. handover finalizado não é alterado; correção gera nova versão;
+6. versão de handover é monotônica por tenant + janela de turno;
+7. handover e seus itens são persistidos atomicamente;
+8. item de handover preserva o snapshot mesmo que o incidente evolua depois;
+9. template renderizado preserva conteúdo final e versão do template;
+10. IDs externos de integração não podem colidir dentro do mesmo tenant/provedor.
+
+## Regras de seleção do handover — Sprint 4
+
+O preview/finalização considera:
+
+- incidentes ativos no momento da geração: qualquer status diferente de `RESOLVED` e `CLOSED`;
+- incidentes normalizados no turno: incidentes com evento `INCIDENT_NORMALIZED` ocorrido entre `window_start` e `window_end`;
+- união sem duplicidade por `incident_id`.
+
+A finalização recalcula server-side o conjunto do snapshot. A lista de itens não é aceita do cliente como autoridade.
