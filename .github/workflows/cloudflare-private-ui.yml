@@ -1,0 +1,80 @@
+name: Cloudflare Private UI
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/cloudflare-private-ui.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/cloudflare-private-ui.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "apps/web/.node-version"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Upgrade npm
+        run: npm install --global npm@11
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Validate static asset output
+        run: test -f dist/noc-flow-cloud-web/browser/index.html
+
+      - name: Validate Wrangler private defaults
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const config = JSON.parse(fs.readFileSync('wrangler.jsonc', 'utf8'));
+          const expectedDirectory = './dist/noc-flow-cloud-web/browser';
+
+          if (config.name !== 'p0-noc-flow-cloud-v2') {
+            throw new Error('Unexpected Worker name');
+          }
+          if (config.workers_dev !== false) {
+            throw new Error('workers_dev must remain false until Access is enabled');
+          }
+          if (config.preview_urls !== false) {
+            throw new Error('preview_urls must remain false until Access is enabled');
+          }
+          if (config.assets?.directory !== expectedDirectory) {
+            throw new Error('Unexpected assets.directory');
+          }
+          if (config.assets?.not_found_handling !== 'single-page-application') {
+            throw new Error('SPA fallback is required');
+          }
+          NODE
+
+      - name: Wrangler dry run
+        run: npx --yes wrangler@4 deploy --dry-run
