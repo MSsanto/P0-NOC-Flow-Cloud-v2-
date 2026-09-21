@@ -4,7 +4,6 @@ from app.api.v1.router import api_v1_router
 from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
-from app.core.logging import configure_logging
 from app.core.middleware import register_middleware
 from app.modules.incidents.query_api import router as incident_query_router
 
