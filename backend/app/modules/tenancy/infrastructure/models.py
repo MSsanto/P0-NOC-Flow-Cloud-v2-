@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Time, Uuid, func
@@ -39,10 +39,10 @@ class TenantModel(Base):
         default="UTC",
         server_default="UTC",
     )
-    shift_start_local: Mapped[object] = mapped_column(
+    shift_start_local: Mapped[time] = mapped_column(
         Time,
         nullable=False,
-        default=lambda: __import__("datetime").time(6, 0),
+        default=lambda: time(6, 0),
     )
     shift_duration_minutes: Mapped[int] = mapped_column(
         Integer,
