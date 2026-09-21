@@ -776,6 +776,37 @@ async function authenticateAccessRequest(request) {
   };
 }
 
+async function ensureTenantOperationalColumns(env) {
+  const info = await env.DB.prepare("PRAGMA table_info(tenants)").all();
+  const columns = new Set((info.results ?? []).map((row) => row.name));
+  const statements = [];
+
+  if (!columns.has("timezone")) {
+    statements.push(
+      env.DB.prepare(
+        "ALTER TABLE tenants ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC'",
+      ),
+    );
+  }
+  if (!columns.has("shift_start_local")) {
+    statements.push(
+      env.DB.prepare(
+        "ALTER TABLE tenants ADD COLUMN shift_start_local TEXT NOT NULL DEFAULT '06:00:00'",
+      ),
+    );
+  }
+  if (!columns.has("shift_duration_minutes")) {
+    statements.push(
+      env.DB.prepare(
+        "ALTER TABLE tenants ADD COLUMN shift_duration_minutes INTEGER NOT NULL DEFAULT 720",
+      ),
+    );
+  }
+  if (statements.length > 0) {
+    await env.DB.batch(statements);
+  }
+}
+
 async function ensureSchema(env) {
   if (!env.DB) {
     throw problem(
@@ -788,15 +819,18 @@ async function ensureSchema(env) {
   }
 
   if (!schemaReadyPromise) {
-    schemaReadyPromise = env.DB
-      .batch([
+    schemaReadyPromise = (async () => {
+      await env.DB.batch([
         env.DB.prepare(`
           CREATE TABLE IF NOT EXISTS tenants (
             id TEXT PRIMARY KEY,
             slug TEXT NOT NULL UNIQUE,
             name TEXT NOT NULL,
             is_active INTEGER NOT NULL DEFAULT 1,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            timezone TEXT NOT NULL DEFAULT 'UTC',
+            shift_start_local TEXT NOT NULL DEFAULT '06:00:00',
+            shift_duration_minutes INTEGER NOT NULL DEFAULT 720
           )
         `),
         env.DB.prepare(`
@@ -846,6 +880,43 @@ async function ensureSchema(env) {
             FOREIGN KEY (incident_id) REFERENCES incidents(id)
           )
         `),
+      ]);
+
+      await ensureTenantOperationalColumns(env);
+
+      await env.DB.batch([
+        env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS handovers (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            window_start TEXT NOT NULL,
+            window_end TEXT NOT NULL,
+            version INTEGER NOT NULL CHECK (version >= 1),
+            observations TEXT,
+            finalized_by_subject TEXT NOT NULL,
+            finalized_at TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE (tenant_id, window_start, window_end, version),
+            FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+          )
+        `),
+        env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS handover_items (
+            id TEXT PRIMARY KEY,
+            handover_id TEXT NOT NULL,
+            incident_id TEXT NOT NULL,
+            title_snapshot TEXT NOT NULL,
+            affected_resource_snapshot TEXT NOT NULL,
+            severity_snapshot TEXT NOT NULL,
+            status_snapshot TEXT NOT NULL,
+            started_at_snapshot TEXT NOT NULL,
+            last_event_message_snapshot TEXT,
+            last_event_at_snapshot TEXT,
+            UNIQUE (handover_id, incident_id),
+            FOREIGN KEY (handover_id) REFERENCES handovers(id),
+            FOREIGN KEY (incident_id) REFERENCES incidents(id)
+          )
+        `),
         env.DB.prepare(
           "CREATE INDEX IF NOT EXISTS idx_incidents_tenant_started ON incidents(tenant_id, started_at DESC)",
         ),
@@ -858,20 +929,30 @@ async function ensureSchema(env) {
         env.DB.prepare(
           "CREATE INDEX IF NOT EXISTS idx_events_tenant_incident ON incident_events(tenant_id, incident_id, occurred_at)",
         ),
-      ])
-      .then(async () => {
-        const now = new Date().toISOString();
-        await env.DB.prepare(
-          `INSERT OR IGNORE INTO tenants(id, slug, name, is_active, created_at)
-           VALUES (?, 'private-demo', 'NOC Flow Private Demo', 1, ?)`,
-        )
-          .bind(TENANT_ID, now)
-          .run();
-      })
-      .catch((error) => {
-        schemaReadyPromise = undefined;
-        throw error;
-      });
+        env.DB.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_handovers_tenant_finalized ON handovers(tenant_id, finalized_at DESC)",
+        ),
+        env.DB.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_handovers_tenant_window_version ON handovers(tenant_id, window_start DESC, version DESC)",
+        ),
+        env.DB.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_handover_items_handover ON handover_items(handover_id)",
+        ),
+      ]);
+
+      const now = new Date().toISOString();
+      await env.DB.prepare(`
+        INSERT OR IGNORE INTO tenants(
+          id, slug, name, is_active, created_at,
+          timezone, shift_start_local, shift_duration_minutes
+        ) VALUES (?, 'private-demo', 'NOC Flow Private Demo', 1, ?, 'UTC', '06:00:00', 720)
+      `)
+        .bind(TENANT_ID, now)
+        .run();
+    })().catch((error) => {
+      schemaReadyPromise = undefined;
+      throw error;
+    });
   }
   return schemaReadyPromise;
 }
