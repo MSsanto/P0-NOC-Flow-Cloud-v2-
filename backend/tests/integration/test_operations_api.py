@@ -8,12 +8,12 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_session_factory
 from app.main import app
-from app.modules.tenancy.application.context import RequestContext
-from app.modules.tenancy.application.security import Role
-from app.modules.tenancy.presentation.dependencies import get_request_context
 from app.modules.incidents.infrastructure.models import IncidentEventModel, IncidentModel
 from app.modules.operations.infrastructure.models import HandoverItemModel, HandoverModel
+from app.modules.tenancy.application.context import RequestContext
+from app.modules.tenancy.application.security import Role
 from app.modules.tenancy.infrastructure.models import TenantMembershipModel, TenantModel
+from app.modules.tenancy.presentation.dependencies import get_request_context
 
 
 @pytest.fixture(autouse=True)
