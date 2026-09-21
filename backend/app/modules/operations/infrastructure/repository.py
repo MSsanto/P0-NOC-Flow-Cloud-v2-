@@ -5,6 +5,7 @@ from sqlalchemy import case, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.modules.audit.infrastructure.repository import add_audit_event
 from app.modules.incidents.domain.entities import IncidentSeverity, IncidentStatus
 from app.modules.incidents.infrastructure.models import IncidentEventModel, IncidentModel
 from app.modules.operations.application.services import HandoverVersionConflictError
@@ -172,6 +173,14 @@ class SqlAlchemyOperationsRepository:
                         last_event_at_snapshot=item.last_event_at,
                     )
                 )
+            add_audit_event(
+                self.session,
+                tenant_id=tenant_id,
+                actor_subject=actor_subject,
+                action="handover.finalized",
+                resource_type="handover",
+                resource_id=model.id,
+            )
             self.session.commit()
             self.session.refresh(model)
         except IntegrityError as exc:
