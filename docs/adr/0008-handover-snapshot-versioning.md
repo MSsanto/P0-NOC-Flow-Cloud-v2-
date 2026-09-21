@@ -23,9 +23,9 @@ O preview inclui, no mínimo:
 - incidentes relevantes resolvidos no turno;
 - severidade e status no instante da geração;
 - situação/última atualização disponível;
-- protocolos e próximo passo quando existirem no modelo implementado;
-- observações informadas pelo operador;
-- ator e timestamps resolvidos pelo backend.
+- ator e timestamps derivados do contexto/dados do backend.
+
+Observações são adicionadas pelo operador na UI após carregar o preview e são enviadas somente no comando de finalização. Elas não fazem parte do cálculo do preview.
 
 ### Finalização
 
@@ -72,7 +72,7 @@ Fluxo previsto:
 1. consultar preview;
 2. revisar observações;
 3. finalizar snapshot;
-4. consultar handover mais recente ou versão específica.
+4. consultar handover mais recente, histórico paginado ou versão específica.
 
 Não haverá update/delete de handover finalizado na Sprint 4.
 
