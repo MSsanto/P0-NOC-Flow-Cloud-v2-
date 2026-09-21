@@ -123,3 +123,10 @@ Regras:
 - vazamento cross-tenant em agregados do dashboard.
 
 As mitigações obrigatórias são authorization server-side, tenant scoping, constraints transacionais, snapshot imutável, validação Pydantic, escaping no frontend e testes negativos dedicados.
+
+
+## Baseline — Sprint 5
+
+A Sprint 5 introduz `audit:read` apenas para Admin e Supervisor. Auditoria e logging usam allowlist de metadados. São proibidos: Authorization, Cookie, JWT, request/response body, sintomas, mensagens de atualização e observações de handover.
+
+O request ID é sanitizado antes de entrar no contexto e logs estruturados permanecem provider-neutral.
