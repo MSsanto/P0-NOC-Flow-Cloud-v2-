@@ -31,7 +31,7 @@ Ameaças prioritárias:
 
 ## Controles P1/P2
 
-- OIDC/OAuth2;
+- OIDC/OAuth2 com validação de assinatura/JWKS, issuer, audience, expiração e algoritmos permitidos;
 - backend como autoridade de autorização;
 - validação de membership em toda operação tenant-scoped;
 - ORM/queries parametrizadas;
@@ -45,20 +45,20 @@ Ameaças prioritárias:
 - secrets somente em secret store/env local ignorado;
 - dependency scanning e secret scanning no CI quando disponível.
 
-## RBAC inicial
+## RBAC implementado na Sprint 3
 
-| Ação | Analyst | Supervisor | Tenant Admin | Platform Admin |
+Roles internas vigentes: `Admin`, `Supervisor`, `Operator` e `Viewer`.
+
+| Permissão | Admin | Supervisor | Operator | Viewer |
 |---|---:|---:|---:|---:|
-| Ver incidentes | ✓ | ✓ | ✓ | conforme suporte autorizado |
-| Criar/atualizar incidente | ✓ | ✓ | ✓ | — |
-| Reabrir fechado | limitado | ✓ | ✓ | — |
-| Finalizar handover | ✓ | ✓ | ✓ | — |
-| Editar base operacional | — | limitado | ✓ | — |
-| Gerir memberships | — | — | ✓ | ✓ |
-| Criar tenant | — | — | — | ✓ |
-| Ver auditoria | — | ✓ | ✓ | suporte autorizado |
+| `incident:read` | ✓ | ✓ | ✓ | ✓ |
+| `incident:create` | ✓ | ✓ | ✓ | — |
+| `incident:update` | ✓ | ✓ | ✓ | — |
+| `incident:normalize` | ✓ | ✓ | ✓ | — |
 
-A matriz será transformada em permissions explícitas; roles não devem virar `if role == ...` espalhados pelo código.
+As permissions são calculadas server-side a partir da role persistida em `tenant_memberships`. Claims externos de role/group não são autoridade de autorização.
+
+Novas permissões para handover, administração, auditoria ou platform administration devem ser adicionadas explicitamente quando o incremento correspondente for implementado; não devem ser inferidas antecipadamente a partir da nomenclatura da role.
 
 ## Dados públicos de portfólio
 

@@ -2,7 +2,7 @@
 
 Base: `/api/v1`
 
-O OpenAPI gerado pelo FastAPI é a fonte executável do contrato implementado. Este documento registra as convenções estáveis e o estado funcional alcançado até a Sprint 2.
+O OpenAPI gerado pelo FastAPI é a fonte executável do contrato implementado. Este documento registra as convenções estáveis e o estado funcional alcançado até a Sprint 3.
 
 ## Convenções
 
@@ -21,6 +21,14 @@ O OpenAPI gerado pelo FastAPI é a fonte executável do contrato implementado. E
 GET /health/live
 GET /health/ready
 ```
+
+## Identidade — endpoint implementado
+
+```text
+GET /auth/me
+```
+
+`GET /auth/me` retorna o contexto autenticado resolvido pelo backend para o tenant ativo, incluindo identidade e permissões derivadas da membership interna. O cliente não define role ou permissões.
 
 ## Incidentes — endpoints implementados
 
@@ -173,18 +181,26 @@ A API da Sprint 2 não oferece alteração ou exclusão de eventos da timeline.
 
 - `200/201`: sucesso;
 - `400`: requisição malformada quando aplicável;
-- `401`: reservado para autenticação real futura;
-- `403`: reservado para autorização/RBAC real futura;
+- `401`: autenticação ausente, inválida ou expirada;
+- `403`: identidade autenticada sem membership ativa ou sem permissão para a ação;
 - `404`: recurso inexistente no contexto autorizado;
 - `409`: conflito de lifecycle;
 - `422`: validação estrutural/semântica;
 - `500`: erro inesperado, sem exposição de stack/SQL/secrets.
 
-## Segurança e identidade da alpha
+## Segurança e identidade
 
-Na Sprint 2, tenant e ator são resolvidos por contexto server-side. O provider demo só é suportado em `development/test`. O cliente não controla `tenant_id` ou `actor_subject` por body.
+Desde a Sprint 3, a API suporta três modos explícitos de identidade:
 
-OIDC/RBAC, identidade confiável e exposição pública pertencem a incremento posterior. A `v0.2.0-alpha` não é aprovada para produção.
+- `demo`: somente para `development`/`test`;
+- `cloudflare_access`: valida o JWT do Cloudflare Access para a demo privada;
+- `oidc`: valida bearer token OIDC/JWT por assinatura/JWKS, issuer, audience, expiração e subject.
+
+A autenticação externa identifica o usuário, mas não concede role. O backend resolve `users` e `tenant_memberships` internamente e deriva as permissões a partir da role persistida.
+
+O cliente não controla `tenant_id`, `actor_subject`, roles ou permissões por body. Identidade autenticada sem membership válida recebe `403`; token ausente/inválido recebe `401`.
+
+A candidata `v0.3.0-beta` permanece destinada a ambiente local e demo privada protegida. Produção pública continua bloqueada até homologação e hardening posteriores.
 
 ## Contrato detalhado do incremento
 

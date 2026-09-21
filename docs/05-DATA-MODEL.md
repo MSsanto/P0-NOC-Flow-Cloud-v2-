@@ -4,7 +4,7 @@
 
 Definir o modelo físico vigente do NOC Flow Cloud v2 com foco em integridade, isolamento por tenant, rastreabilidade, migrations reproduzíveis e evolução compatível com o roadmap.
 
-**Estado atual:** Sprint 2 concluída tecnicamente. O schema executável possui `tenants`, `incidents` e `incident_events`.
+**Estado atual:** Sprint 3 concluída tecnicamente. O schema executável possui `tenants`, `users`, `tenant_memberships`, `incidents` e `incident_events`.
 
 ## Decisões vigentes
 
@@ -18,10 +18,12 @@ Definir o modelo físico vigente do NOC Flow Cloud v2 com foco em integridade, i
 - A timeline é append-only no fluxo suportado: não existe endpoint de update/delete de evento.
 - Dados públicos/de portfólio devem ser exclusivamente sintéticos.
 
-## ER — estado após Sprint 2
+## ER — estado após Sprint 3
 
 ```mermaid
 erDiagram
+    TENANT ||--o{ TENANT_MEMBERSHIP : has
+    USER ||--o{ TENANT_MEMBERSHIP : joins
     TENANT ||--o{ INCIDENT : owns
     TENANT ||--o{ INCIDENT_EVENT : owns
     INCIDENT ||--o{ INCIDENT_EVENT : contains
@@ -31,6 +33,23 @@ erDiagram
         varchar slug UK
         varchar name
         varchar timezone
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    USER {
+        uuid id PK
+        varchar external_subject UK
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    TENANT_MEMBERSHIP {
+        uuid tenant_id PK,FK
+        uuid user_id PK,FK
+        varchar role
         boolean is_active
         timestamptz created_at
         timestamptz updated_at
@@ -75,6 +94,29 @@ erDiagram
 | `created_at` / `updated_at` | timestamps de auditoria básica |
 
 O tenant não deve ser removido fisicamente enquanto possuir dados operacionais relacionados.
+
+## `users`
+
+| Campo | Regra principal |
+|---|---|
+| `id` | UUID, PK |
+| `external_subject` | identificador externo único do usuário autenticado |
+| `is_active` | usuário precisa estar ativo para compor contexto autenticado |
+| `created_at` / `updated_at` | timestamps de auditoria básica |
+
+O sistema não armazena senha. O vínculo com o provedor de identidade é feito pelo `external_subject`.
+
+## `tenant_memberships`
+
+| Campo | Regra principal |
+|---|---|
+| `tenant_id` | PK composta; FK para `tenants` |
+| `user_id` | PK composta; FK para `users` |
+| `role` | `Admin | Supervisor | Operator | Viewer` |
+| `is_active` | membership precisa estar ativa para conceder contexto |
+| `created_at` / `updated_at` | timestamps de auditoria básica |
+
+A autorização é resolvida internamente a partir desta tabela. Claims externos de role/group não substituem a membership persistida.
 
 ## `incidents`
 
@@ -170,11 +212,11 @@ A consulta avançada da Sprint 2 usa offset/limit por `page` e `page_size` (máx
 
 A migration da Sprint 2 cria `incident_events` e preserva a integridade do histórico necessário ao incremento.
 
-## Compatibilidade com identidade futura
+## Identidade e compatibilidade de histórico
 
-`created_by_subject` e `actor_subject` representam o subject do ator resolvido pelo backend. Na alpha, o provider demo existe apenas em `development/test`.
+`created_by_subject` e `actor_subject` preservam a identidade do ator resolvida pelo backend. Desde a Sprint 3, `users` e `tenant_memberships` fornecem o contexto confiável de autorização, enquanto os subjects já gravados continuam preservados no histórico operacional.
 
-Quando `users`/`memberships` e OIDC/RBAC entrarem, a migração deve seguir expand/contract, preservando histórico e evitando remover os subjects existentes no mesmo deploy em que as novas FKs forem introduzidas.
+O provider demo permanece restrito a `development`/`test`; staging/produção exigem identidade externa validada.
 
 ## Modelo alvo do roadmap
 
