@@ -15,9 +15,9 @@ Objetivo: provar que requisitos essenciais possuem trabalho planejado e, quando 
 | RF-009 Normalização | P2-006 / Sprint 2 | `test_incidents_api.py` + Sprint 2 Functional Smoke |
 | RF-010 Reabertura | P2-007 | permission/state tests |
 | RF-011 Templates | P2-008/P2-009 | snapshot/version tests |
-| RF-012 Handover | P2-012/P2-013 / Sprint 4 | ADR-0008 + preview/finalize/read + imutabilidade/versionamento/concurrency/cross-tenant planejados |
+| RF-012 Handover | P2-012/P2-013 / Sprint 4 | ADR-0008 + APIs de preview/finalize/history/latest/by-id + integration tests + Sprint 4 Functional Smoke |
 | RF-013 Busca | P2-011 | query integration |
-| RF-014 Dashboard | P2-010 / Sprint 4 | agregação tenant-scoped + ordenação + estados UI + 401/403 planejados |
+| RF-014 Dashboard | P2-010 / Sprint 4 | `/dashboard/summary` + frontend Dashboard + integration tests + Sprint 4 Functional Smoke |
 | RF-015 Auditoria | P2-014 | audit transaction tests |
 | RF-016 Exportação | P2-016 | authz + audit |
 | RF-017 Demo sintética | P2-019 | public-data validation |
@@ -69,3 +69,18 @@ Em 21/09/2026, após merge da sincronização normativa da Sprint 3:
 - compose smoke: success;
 - Sprint 2 Functional Smoke: success;
 - Private Demo Compose: success.
+
+
+## Evidência de implementação — Sprint 4
+
+Branch de implementação: `feat/sprint4-dashboard-handover`.
+
+Principais artefatos:
+
+- migration `20260921_0004_shift_handovers.py`;
+- módulo `backend/app/modules/operations/`;
+- componentes Angular `dashboard-page.component.ts` e `handover-page.component.ts`;
+- testes `test_shift_window.py` e `test_operations_api.py`;
+- workflow `sprint4-smoke.yml`.
+
+Gates do PR de implementação: CI, Frontend Foundation, Cloudflare Private UI, Private Demo Compose, Sprint 2 Functional Smoke e Sprint 4 Functional Smoke.
