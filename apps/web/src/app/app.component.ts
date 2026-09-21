@@ -36,6 +36,9 @@ import { AuthContextService } from './core/auth/auth-context.service';
           @if (auth.can('handover:read')) {
             <a routerLink="/handovers" routerLinkActive="active">Passagem de turno</a>
           }
+          @if (auth.can('audit:read')) {
+            <a routerLink="/audit" routerLinkActive="active">Auditoria</a>
+          }
         </nav>
       </header>
 
