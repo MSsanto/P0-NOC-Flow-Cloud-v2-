@@ -37,13 +37,13 @@ import { DashboardSummary } from './operations.model';
         </p>
 
         <div class="cards" aria-label="Resumo do plantão">
-          <a routerLink="/incidents" [queryParams]="{ status: 'active' }">
+          <a routerLink="/incidents">
             <span>Incidentes ativos</span><strong>{{ data.active_count }}</strong>
           </a>
-          <a routerLink="/incidents" [queryParams]="{ severity: 'CRITICAL' }">
+          <a routerLink="/incidents">
             <span>Críticos ativos</span><strong>{{ data.critical_active_count }}</strong>
           </a>
-          <a routerLink="/incidents" [queryParams]="{ status: 'RESOLVED' }">
+          <a routerLink="/incidents">
             <span>Normalizados no turno</span><strong>{{ data.resolved_in_shift_count }}</strong>
           </a>
         </div>
