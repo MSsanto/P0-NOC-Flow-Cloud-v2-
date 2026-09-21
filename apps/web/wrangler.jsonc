@@ -1,7 +1,7 @@
 {
   "name": "p0-noc-flow-cloud-v2",
   "compatibility_date": "2026-09-21",
-  "workers_dev": false,
+  "workers_dev": true,
   "preview_urls": false,
   "assets": {
     "directory": "./dist/noc-flow-cloud-web/browser",
