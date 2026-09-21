@@ -390,7 +390,7 @@ export function calculateShiftWindow({
 
   const match =
     typeof shift_start_local === "string"
-      ? shift_start_local.match(/^(\\d{2}):(\\d{2})(?::(\\d{2}))?$/)
+      ? shift_start_local.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/)
       : null;
   if (!match) {
     throw problem(
