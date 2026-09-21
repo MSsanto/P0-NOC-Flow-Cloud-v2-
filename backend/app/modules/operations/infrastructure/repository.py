@@ -1,7 +1,7 @@
 from datetime import time
 from uuid import UUID, uuid4
 
-from sqlalchemy import case, desc, func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
