@@ -805,6 +805,335 @@ function mapEvent(row) {
   };
 }
 
+function auditStatement(env, context, requestId, action, resourceType, resourceId, now) {
+  return env.DB.prepare(`
+    INSERT INTO audit_events(
+      id, tenant_id, actor_subject, action, resource_type, resource_id, request_id, occurred_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    crypto.randomUUID(),
+    context.tenant_id,
+    context.actor_subject,
+    action,
+    resourceType,
+    resourceId,
+    requestId,
+    now,
+  );
+}
+
+function currentShiftWindow(now = new Date()) {
+  const current = new Date(now);
+  const anchor = new Date(current);
+  anchor.setUTCHours(6, 0, 0, 0);
+  if (current < anchor) {
+    anchor.setUTCDate(anchor.getUTCDate() - 1);
+  }
+  const elapsed = current.getTime() - anchor.getTime();
+  const slot = Math.floor(elapsed / (12 * 60 * 60 * 1000));
+  const start = new Date(anchor.getTime() + slot * 12 * 60 * 60 * 1000);
+  const end = new Date(start.getTime() + 12 * 60 * 60 * 1000);
+  return { window_start: start.toISOString(), window_end: end.toISOString() };
+}
+
+async function listHandoverItems(env, context, window) {
+  const result = await env.DB.prepare(`
+    SELECT i.*
+    FROM incidents i
+    WHERE i.tenant_id = ?
+      AND (
+        i.status NOT IN ('RESOLVED','CLOSED')
+        OR i.id IN (
+          SELECT incident_id
+          FROM incident_events
+          WHERE tenant_id = ?
+            AND event_type = 'INCIDENT_NORMALIZED'
+            AND occurred_at >= ?
+            AND occurred_at < ?
+        )
+      )
+    ORDER BY
+      CASE i.severity
+        WHEN 'CRITICAL' THEN 0
+        WHEN 'HIGH' THEN 1
+        WHEN 'MEDIUM' THEN 2
+        ELSE 3
+      END,
+      i.started_at ASC
+  `).bind(
+    context.tenant_id,
+    context.tenant_id,
+    window.window_start,
+    window.window_end,
+  ).all();
+
+  const items = [];
+  for (const incident of result.results ?? []) {
+    const latest = await env.DB.prepare(`
+      SELECT message, occurred_at
+      FROM incident_events
+      WHERE tenant_id = ? AND incident_id = ?
+      ORDER BY occurred_at DESC, id DESC
+      LIMIT 1
+    `).bind(context.tenant_id, incident.id).first();
+    items.push({
+      incident_id: incident.id,
+      title: incident.title,
+      affected_resource: incident.affected_resource,
+      severity: incident.severity,
+      status: incident.status,
+      started_at: incident.started_at,
+      last_event_message: latest?.message ?? null,
+      last_event_at: latest?.occurred_at ?? null,
+    });
+  }
+  return items;
+}
+
+async function dashboardSummary(env, context) {
+  requirePermission(context, "incident:read");
+  const window = currentShiftWindow();
+  const activeResult = await env.DB.prepare(`
+    SELECT *
+    FROM incidents
+    WHERE tenant_id = ? AND status NOT IN ('RESOLVED','CLOSED')
+    ORDER BY
+      CASE severity
+        WHEN 'CRITICAL' THEN 0
+        WHEN 'HIGH' THEN 1
+        WHEN 'MEDIUM' THEN 2
+        ELSE 3
+      END,
+      started_at ASC
+  `).bind(context.tenant_id).all();
+  const items = (activeResult.results ?? []).map(mapIncident);
+  const resolved = await env.DB.prepare(`
+    SELECT COUNT(DISTINCT incident_id) AS total
+    FROM incident_events
+    WHERE tenant_id = ?
+      AND event_type = 'INCIDENT_NORMALIZED'
+      AND occurred_at >= ?
+      AND occurred_at < ?
+  `).bind(context.tenant_id, window.window_start, window.window_end).first();
+  return {
+    active_count: items.length,
+    critical_active_count: items.filter((item) => item.severity === "CRITICAL").length,
+    resolved_in_shift_count: Number(resolved?.total ?? 0),
+    shift: window,
+    items,
+  };
+}
+
+async function handoverPreview(env, context) {
+  requirePermission(context, "handover:read");
+  const window = currentShiftWindow();
+  return {
+    ...window,
+    generated_at: new Date().toISOString(),
+    items: await listHandoverItems(env, context, window),
+  };
+}
+
+function mapHandoverItem(row) {
+  return {
+    incident_id: row.incident_id,
+    title: row.title_snapshot,
+    affected_resource: row.affected_resource_snapshot,
+    severity: row.severity_snapshot,
+    status: row.status_snapshot,
+    started_at: row.started_at_snapshot,
+    last_event_message: row.last_event_message_snapshot ?? null,
+    last_event_at: row.last_event_at_snapshot ?? null,
+  };
+}
+
+async function getHandoverById(env, context, id) {
+  requirePermission(context, "handover:read");
+  const row = await env.DB.prepare(`
+    SELECT *
+    FROM handovers
+    WHERE tenant_id = ? AND id = ?
+  `).bind(context.tenant_id, id).first();
+  if (!row) {
+    throw problem(
+      404,
+      "Handover not found",
+      "The requested handover was not found in the active tenant.",
+      "HANDOVER_NOT_FOUND",
+      "handover-not-found",
+    );
+  }
+  const itemsResult = await env.DB.prepare(`
+    SELECT *
+    FROM handover_items
+    WHERE handover_id = ?
+    ORDER BY started_at_snapshot ASC, id ASC
+  `).bind(row.id).all();
+  return {
+    id: row.id,
+    version: Number(row.version),
+    window_start: row.window_start,
+    window_end: row.window_end,
+    observations: row.observations ?? null,
+    finalized_by_subject: row.finalized_by_subject,
+    finalized_at: row.finalized_at,
+    items: (itemsResult.results ?? []).map(mapHandoverItem),
+  };
+}
+
+async function finalizeHandover(env, context, request, requestId) {
+  requirePermission(context, "handover:finalize");
+  const payload = ensurePlainObject(await readJson(request));
+  assertAllowedKeys(payload, new Set(["observations"]));
+  const observations =
+    payload.observations === undefined || payload.observations === null || payload.observations === ""
+      ? null
+      : requiredString(payload.observations, "observations", 3, 4000);
+  const window = currentShiftWindow();
+  const items = await listHandoverItems(env, context, window);
+  const versionRow = await env.DB.prepare(`
+    SELECT MAX(version) AS version
+    FROM handovers
+    WHERE tenant_id = ? AND window_start = ? AND window_end = ?
+  `).bind(context.tenant_id, window.window_start, window.window_end).first();
+  const version = Number(versionRow?.version ?? 0) + 1;
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  const statements = [
+    env.DB.prepare(`
+      INSERT INTO handovers(
+        id, tenant_id, window_start, window_end, version, observations,
+        finalized_by_subject, finalized_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      id,
+      context.tenant_id,
+      window.window_start,
+      window.window_end,
+      version,
+      observations,
+      context.actor_subject,
+      now,
+      now,
+    ),
+    ...items.map((item) =>
+      env.DB.prepare(`
+        INSERT INTO handover_items(
+          id, handover_id, incident_id, title_snapshot, affected_resource_snapshot,
+          severity_snapshot, status_snapshot, started_at_snapshot,
+          last_event_message_snapshot, last_event_at_snapshot
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        crypto.randomUUID(),
+        id,
+        item.incident_id,
+        item.title,
+        item.affected_resource,
+        item.severity,
+        item.status,
+        item.started_at,
+        item.last_event_message,
+        item.last_event_at,
+      ),
+    ),
+    auditStatement(env, context, requestId, "handover.finalized", "handover", id, now),
+  ];
+  try {
+    await env.DB.batch(statements);
+  } catch {
+    throw problem(
+      409,
+      "Handover version conflict",
+      "Another handover version was finalized concurrently. Reload and try again.",
+      "HANDOVER_VERSION_CONFLICT",
+      "handover-version-conflict",
+    );
+  }
+  return getHandoverById(env, context, id);
+}
+
+async function handoverHistory(env, context, url) {
+  requirePermission(context, "handover:read");
+  const page = parsePositiveInteger(url.searchParams.get("page"), 1, "page");
+  const pageSize = parsePositiveInteger(url.searchParams.get("page_size"), 25, "page_size", 100);
+  const offset = (page - 1) * pageSize;
+  const [count, list] = await env.DB.batch([
+    env.DB.prepare("SELECT COUNT(*) AS total FROM handovers WHERE tenant_id = ?")
+      .bind(context.tenant_id),
+    env.DB.prepare(`
+      SELECT id, version, window_start, window_end, finalized_by_subject, finalized_at
+      FROM handovers
+      WHERE tenant_id = ?
+      ORDER BY finalized_at DESC, id DESC
+      LIMIT ? OFFSET ?
+    `).bind(context.tenant_id, pageSize, offset),
+  ]);
+  return {
+    items: list.results ?? [],
+    page,
+    page_size: pageSize,
+    total: Number(count.results?.[0]?.total ?? 0),
+  };
+}
+
+async function latestHandover(env, context) {
+  requirePermission(context, "handover:read");
+  const row = await env.DB.prepare(`
+    SELECT id
+    FROM handovers
+    WHERE tenant_id = ?
+    ORDER BY finalized_at DESC, id DESC
+    LIMIT 1
+  `).bind(context.tenant_id).first();
+  if (!row) {
+    throw problem(
+      404,
+      "Handover not found",
+      "No handover exists in the active tenant.",
+      "HANDOVER_NOT_FOUND",
+      "handover-not-found",
+    );
+  }
+  return getHandoverById(env, context, row.id);
+}
+
+async function listAuditEvents(env, context, url) {
+  requirePermission(context, "audit:read");
+  const page = parsePositiveInteger(url.searchParams.get("page"), 1, "page");
+  const pageSize = parsePositiveInteger(url.searchParams.get("page_size"), 25, "page_size", 100);
+  const action = url.searchParams.get("action");
+  const resourceType = url.searchParams.get("resource_type");
+  const predicates = ["tenant_id = ?"];
+  const bindings = [context.tenant_id];
+  if (action) {
+    predicates.push("action = ?");
+    bindings.push(action);
+  }
+  if (resourceType) {
+    predicates.push("resource_type = ?");
+    bindings.push(resourceType);
+  }
+  const where = predicates.join(" AND ");
+  const offset = (page - 1) * pageSize;
+  const [count, list] = await env.DB.batch([
+    env.DB.prepare(`SELECT COUNT(*) AS total FROM audit_events WHERE ${where}`).bind(...bindings),
+    env.DB.prepare(`
+      SELECT id, actor_subject, action, resource_type, resource_id, request_id, occurred_at
+      FROM audit_events
+      WHERE ${where}
+      ORDER BY occurred_at DESC, id DESC
+      LIMIT ? OFFSET ?
+    `).bind(...bindings, pageSize, offset),
+  ]);
+  return {
+    items: list.results ?? [],
+    page,
+    page_size: pageSize,
+    total: Number(count.results?.[0]?.total ?? 0),
+  };
+}
+
 async function getRequiredIncident(env, tenantId, incidentId) {
   const row = await env.DB.prepare(`
     SELECT *
