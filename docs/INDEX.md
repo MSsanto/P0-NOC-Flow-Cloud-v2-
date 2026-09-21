@@ -76,6 +76,7 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 - [Requisitos](02-REQUIREMENTS.md)
 - [Estratégia de testes](09-TEST-STRATEGY.md)
 - [Riscos](15-RISKS.md)
+- [Sprint 004 — Readiness Review](reviews/SPRINT_004_READINESS_REVIEW.md)
 - [Glossário](GLOSSARY.md)
 
 ## Governança do repositório
