@@ -21,6 +21,7 @@
 | R-17 | Duas finalizações de handover criarem versão duplicada ou sobrescreverem contexto | Média | Alto | transação + UNIQUE por tenant/janela/versão + 409 explícito + teste concorrente |
 | R-18 | Dashboard induzir decisão com métrica não sustentada pelo domínio | Média | Alto | limitar Sprint 4 a contagens deriváveis; não exibir SLA/pendência sem regra implementada |
 | R-19 | Snapshot copiar campos futuros/inexistentes e acoplar Sprint 4 a backlog não entregue | Média | Médio | snapshot contém somente dados executáveis; expansão apenas por requisito posterior |
+| R-20 | Cálculo incorreto de janela por timezone/DST ou configuração ambígua | Baixa/Média | Alto | timezone IANA + anchor/duração por tenant + testes de boundary/DST; persistir limites UTC no snapshot |
 
 ## Critérios de escalonamento
 
