@@ -246,6 +246,213 @@ export function validateIncidentNormalize(value) {
   return { note: requiredString(payload.note, "note", 3, 2000) };
 }
 
+export function validateHandoverFinalize(value) {
+  const payload = ensurePlainObject(value);
+  assertAllowedKeys(payload, new Set(["observations"]));
+  if (payload.observations === undefined || payload.observations === null) {
+    return { observations: null };
+  }
+  if (typeof payload.observations !== "string") {
+    throw problem(
+      422,
+      "Request validation failed",
+      "observations must be a string.",
+      "REQUEST_VALIDATION_FAILED",
+      "request-validation-failed",
+    );
+  }
+  const observations = payload.observations.trim();
+  if (observations === "") {
+    return { observations: null };
+  }
+  if (observations.length < 3 || observations.length > 4000) {
+    throw problem(
+      422,
+      "Request validation failed",
+      "observations must contain between 3 and 4000 characters.",
+      "REQUEST_VALIDATION_FAILED",
+      "request-validation-failed",
+    );
+  }
+  return { observations };
+}
+
+export function parseHandoverListQuery(url) {
+  return {
+    page: parsePositiveInteger(url.searchParams.get("page"), 1, "page"),
+    page_size: parsePositiveInteger(
+      url.searchParams.get("page_size"),
+      25,
+      "page_size",
+      100,
+    ),
+  };
+}
+
+function zonedParts(date, timeZone) {
+  let formatter;
+  try {
+    formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    });
+  } catch {
+    throw problem(
+      503,
+      "Shift configuration unavailable",
+      "Tenant timezone is invalid.",
+      "SHIFT_CONFIGURATION_INVALID",
+      "shift-configuration-invalid",
+    );
+  }
+  const parts = Object.fromEntries(
+    formatter
+      .formatToParts(date)
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, Number(part.value)]),
+  );
+  return {
+    year: parts.year,
+    month: parts.month,
+    day: parts.day,
+    hour: parts.hour,
+    minute: parts.minute,
+    second: parts.second,
+  };
+}
+
+function localPartsFromStamp(stamp) {
+  const date = new Date(stamp);
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
+    hour: date.getUTCHours(),
+    minute: date.getUTCMinutes(),
+    second: date.getUTCSeconds(),
+  };
+}
+
+function localPartsToUtc(parts, timeZone) {
+  const targetStamp = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second ?? 0,
+  );
+  let guess = targetStamp;
+  for (let index = 0; index < 4; index += 1) {
+    const observed = zonedParts(new Date(guess), timeZone);
+    const observedStamp = Date.UTC(
+      observed.year,
+      observed.month - 1,
+      observed.day,
+      observed.hour,
+      observed.minute,
+      observed.second,
+    );
+    const delta = targetStamp - observedStamp;
+    guess += delta;
+    if (delta === 0) break;
+  }
+  return new Date(guess);
+}
+
+export function calculateShiftWindow({
+  timezone,
+  shift_start_local,
+  shift_duration_minutes,
+  now = new Date(),
+}) {
+  const duration = Number(shift_duration_minutes);
+  if (
+    !Number.isInteger(duration) ||
+    duration < 60 ||
+    duration > 1440 ||
+    1440 % duration !== 0
+  ) {
+    throw problem(
+      503,
+      "Shift configuration unavailable",
+      "Tenant shift duration is invalid.",
+      "SHIFT_CONFIGURATION_INVALID",
+      "shift-configuration-invalid",
+    );
+  }
+
+  const match =
+    typeof shift_start_local === "string"
+      ? shift_start_local.match(/^(\\d{2}):(\\d{2})(?::(\\d{2}))?$/)
+      : null;
+  if (!match) {
+    throw problem(
+      503,
+      "Shift configuration unavailable",
+      "Tenant shift start is invalid.",
+      "SHIFT_CONFIGURATION_INVALID",
+      "shift-configuration-invalid",
+    );
+  }
+
+  const anchorHour = Number(match[1]);
+  const anchorMinute = Number(match[2]);
+  const anchorSecond = Number(match[3] ?? "0");
+  if (anchorHour > 23 || anchorMinute > 59 || anchorSecond > 59) {
+    throw problem(
+      503,
+      "Shift configuration unavailable",
+      "Tenant shift start is invalid.",
+      "SHIFT_CONFIGURATION_INVALID",
+      "shift-configuration-invalid",
+    );
+  }
+
+  const localNow = zonedParts(now, timezone);
+  const localNowStamp = Date.UTC(
+    localNow.year,
+    localNow.month - 1,
+    localNow.day,
+    localNow.hour,
+    localNow.minute,
+    localNow.second,
+  );
+  let anchorStamp = Date.UTC(
+    localNow.year,
+    localNow.month - 1,
+    localNow.day,
+    anchorHour,
+    anchorMinute,
+    anchorSecond,
+  );
+  if (localNowStamp < anchorStamp) {
+    anchorStamp -= 24 * 60 * 60 * 1000;
+  }
+
+  const elapsedMinutes = Math.floor((localNowStamp - anchorStamp) / 60000);
+  const slot = Math.floor(elapsedMinutes / duration);
+  const startLocalStamp = anchorStamp + slot * duration * 60000;
+  const endLocalStamp = startLocalStamp + duration * 60000;
+
+  return {
+    window_start: localPartsToUtc(
+      localPartsFromStamp(startLocalStamp),
+      timezone,
+    ).toISOString(),
+    window_end: localPartsToUtc(
+      localPartsFromStamp(endLocalStamp),
+      timezone,
+    ).toISOString(),
+  };
+}
+
 function parsePositiveInteger(value, fallback, field, max) {
   if (value === null || value === "") {
     return fallback;
