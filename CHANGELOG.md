@@ -30,7 +30,11 @@ Este projeto segue a estrutura do Keep a Changelog para registrar incrementos re
 - memberships internas e isolamento cross-tenant;
 - endpoint autenticado `GET /api/v1/auth/me`;
 - terceira migration Alembic para usuários e memberships;
-- testes unitários e de integração de autenticação, permissões e isolamento por tenant.
+- testes unitários e de integração de autenticação, permissões e isolamento por tenant;
+- frontend privado publicado em Cloudflare Workers Static Assets e protegido por Access em `All traffic`;
+- adapter de private demo Cloudflare Worker + D1 para o contrato `/api/v1`, com RBAC, tenant scoping, incidentes e timeline;
+- testes de contrato do Worker e gate `Cloudflare Private Full-Stack` com `wrangler deploy --dry-run`;
+- ADR-0009 documentando D1 como adapter de demo, sem substituir FastAPI/PostgreSQL;
 - roteiros reproduzíveis de homologação das candidatas `v0.1.0-alpha` e `v0.2.0-alpha`.
 
 ### Fixed
@@ -58,4 +62,4 @@ Este projeto segue a estrutura do Keep a Changelog para registrar incrementos re
 
 ### Note
 
-A candidata atual é `v0.3.0-beta`, destinada a ambiente local e demo privada protegida por Cloudflare Access/OIDC. OIDC, RBAC e isolamento multi-tenant estão implementados e validados no CI; nenhum deploy público/produção está autorizado. Não há tag/GitHub Release publicada neste estágio.
+A candidata atual é `v0.3.0-beta`. O frontend privado em `workers.dev` foi validado atrás do Cloudflare Access, inclusive com bloqueio anônimo. O adapter full-stack Worker + D1 está implementado e com gates de CI verdes, mas permanece **pendente de homologação live da API/D1**. A arquitetura canônica continua FastAPI/PostgreSQL. Nenhum deploy público/produção, tag ou GitHub Release está autorizado neste estágio.
