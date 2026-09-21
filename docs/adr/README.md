@@ -11,6 +11,8 @@ Este diretório registra decisões arquiteturais relevantes e seus trade-offs.
 - [ADR-0005 — Política de dados públicos](0005-public-data-policy.md)
 - [ADR-0006 — Versionamento da API e contrato uniforme de erros](0006-api-versioning-and-errors.md)
 - [ADR-0007 — UUID4 na aplicação e Alembic para migrations](0007-sprint1-ids-and-migrations.md)
+- [ADR-0008 — Handover como snapshot versionado](0008-handover-snapshot-versioning.md)
+- [ADR-0009 — Adapter Cloudflare Worker + D1 para private demo](0009-cloudflare-worker-d1-private-demo.md)
 
 ## Quando criar um ADR
 
@@ -33,5 +35,3 @@ Criar ou atualizar um ADR quando houver decisão duradoura envolvendo arquitetur
 - Deprecated
 
 ADRs aceitos não devem ser reescritos para apagar o histórico. Quando uma decisão for substituída, o ADR anterior deve indicar qual novo ADR o supersede.
-
-- [ADR-0008 — Handover como snapshot versionado](0008-handover-snapshot-versioning.md)
