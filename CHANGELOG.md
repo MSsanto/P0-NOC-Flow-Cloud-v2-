@@ -70,4 +70,4 @@ Este projeto segue a estrutura do Keep a Changelog para registrar incrementos re
 
 ### Note
 
-A candidata atual é `v0.4.0-beta`, destinada a ambiente local e demo privada protegida por Cloudflare Access/OIDC. OIDC, RBAC e isolamento multi-tenant estão implementados e validados no CI; nenhum deploy público/produção está autorizado. Não há tag/GitHub Release publicada neste estágio.
+A `v0.4.0-beta` foi homologada em 21/09/2026 para ambiente local e demo privada protegida por Cloudflare Access/OIDC. OIDC, RBAC e isolamento multi-tenant estão implementados e validados no CI. Nenhum deploy público/produção está autorizado. Não há tag/GitHub Release publicada neste estágio.
