@@ -1,6 +1,6 @@
 # Sprint 004 — Dashboard & Passagem de Turno
 
-**Status:** Refinamento / Definition of Ready  
+**Status:** Ready para implementação — condicionado ao merge deste pacote documental com gates verdes  
 **Duração planejada:** 2 semanas  
 **Release alvo:** `v0.4.0-beta`  
 **Sprint Goal:** permitir continuidade operacional entre turnos com visão rápida dos incidentes e pendências.
@@ -137,14 +137,14 @@ A autorização continua server-side e derivada das memberships internas.
 
 - [x] TASK-PO-S4-01 problema e conteúdo mínimo definidos;
 - [x] TASK-ARC-S4-01 decisão de snapshot/versionamento registrada no ADR-0008;
-- [ ] TASK-UX-S4-01 contrato UX do dashboard;
-- [ ] TASK-UX-S4-02 contrato UX do handover;
-- [ ] TASK-DB-S4-01 schema físico e migration planejados;
-- [ ] TASK-BE-S4-00 contrato HTTP antes do código;
-- [ ] TASK-QA-S4-00 matriz de cenários e evidências;
+- [x] TASK-UX-S4-01 contrato UX do dashboard;
+- [x] TASK-UX-S4-02 contrato UX do handover;
+- [x] TASK-DB-S4-01 schema físico e migration planejados;
+- [x] TASK-BE-S4-00 contrato HTTP antes do código;
+- [x] TASK-QA-S4-00 matriz de cenários e evidências;
 - [x] TASK-SEC-S4-00 permissions alvo definidas;
-- [ ] TASK-DOC-S4-00 rastreabilidade completa;
-- [ ] TASK-CR-S4-00 revisão independente do readiness.
+- [x] TASK-DOC-S4-00 rastreabilidade completa;
+- [x] TASK-CR-S4-00 revisão documental adversarial registrada em `docs/reviews/SPRINT_004_READINESS_REVIEW.md`.
 
 ## Tasks de implementação
 
