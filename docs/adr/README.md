@@ -33,3 +33,5 @@ Criar ou atualizar um ADR quando houver decisão duradoura envolvendo arquitetur
 - Deprecated
 
 ADRs aceitos não devem ser reescritos para apagar o histórico. Quando uma decisão for substituída, o ADR anterior deve indicar qual novo ADR o supersede.
+
+- [ADR-0008 — Handover como snapshot versionado](0008-handover-snapshot-versioning.md)

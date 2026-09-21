@@ -105,26 +105,64 @@ Na página do incidente:
 
 O sistema não deve esconder o incidente imediatamente após resolver; exibir feedback e permitir revisar o registro.
 
-## Fluxo 4 — Passagem de turno
+## Fluxo 4 — Passagem de turno — Sprint 4
+
+### Preview
 
 1. Acessar “Passagem de turno”.
-2. Sistema calcula turno atual pela timezone/configuração.
-3. Prévia inclui incidentes abertos + relevantes resolvidos no turno.
-4. Analista adiciona observações e ajusta próximos passos permitidos.
-5. Finalizar gera snapshot versionado.
-6. Próximo turno consulta versão final, sem depender do estado futuro das telas.
+2. Sistema calcula a janela atual usando a timezone/configuração do tenant.
+3. Carregar preview via API, sem persistir draft.
+4. Exibir incidentes ativos e incidentes normalizados no turno.
+5. Permitir observação geral opcional.
+6. Não permitir que o usuário remova/adicione manualmente incidentes ao snapshot na Sprint 4; a seleção é autoridade do backend.
 
-## Dashboard
+Estados obrigatórios:
 
-Cards devem funcionar como atalhos:
+- loading;
+- preview vazio;
+- preview com itens;
+- erro recuperável;
+- sessão expirada;
+- sem permissão.
+
+### Finalização
+
+1. Usuário com permissão aciona “Finalizar passagem”.
+2. UI apresenta confirmação curta explicando que o snapshot finalizado é imutável.
+3. Botão fica desabilitado durante envio para impedir duplo submit.
+4. Backend recalcula o snapshot e persiste nova versão.
+5. Em sucesso, UI navega para a versão finalizada e mostra versão, autoria e horário.
+6. Em `409` de concorrência, UI informa que outra finalização ocorreu e oferece recarregar o handover mais recente.
+7. Viewer não vê ação de finalizar, mas a API continua sendo a autoridade e retorna 403 se chamada diretamente.
+
+### Consulta
+
+- “Passagem de turno” abre o handover mais recente quando existir;
+- versões anteriores ficam acessíveis por histórico/link;
+- o conteúdo do snapshot nunca é atualizado visualmente a partir do estado atual do incidente;
+- empty state: “Nenhuma passagem de turno finalizada para esta operação.”
+
+## Dashboard — Sprint 4
+
+A primeira versão usa somente agregados sustentados pelo domínio executável:
 
 - incidentes ativos;
-- sem atualização dentro da meta;
-- aguardando terceiro;
-- em monitoramento;
-- resolvidos no turno.
+- incidentes críticos ativos;
+- incidentes normalizados na janela atual.
 
-Abaixo dos cards: fila priorizada por severidade + envelhecimento.
+Abaixo dos cards: fila ativa ordenada por severidade e antiguidade (`started_at`).
+
+Cards funcionam como atalhos/filtros para a lista de incidentes. Não serão exibidas métricas de SLA, “aguardando terceiro” ou atraso de atualização enquanto essas regras não estiverem implementadas e medidas.
+
+### Estados
+
+- loading com skeleton/placeholder estável;
+- vazio sem incidentes ativos;
+- erro recuperável com retry;
+- 401/sessão expirada;
+- 403/sem permissão.
+
+O dashboard não deve depender somente de cor para severidade/status e precisa manter navegação por teclado.
 
 ## Acessibilidade
 

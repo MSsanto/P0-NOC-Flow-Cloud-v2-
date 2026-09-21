@@ -112,7 +112,7 @@ O sistema não armazena senha. O vínculo com o provedor de identidade é feito 
 |---|---|
 | `tenant_id` | PK composta; FK para `tenants` |
 | `user_id` | PK composta; FK para `users` |
-| `role` | `Admin | Supervisor | Operator | Viewer` |
+| `role` | `Admin`, `Supervisor`, `Operator` ou `Viewer` |
 | `is_active` | membership precisa estar ativa para conceder contexto |
 | `created_at` / `updated_at` | timestamps de auditoria básica |
 
@@ -254,3 +254,84 @@ Toda mudança de schema deve responder:
 7. Existe estratégia de rollback/correção forward?
 8. Histórico e auditoria são preservados?
 9. Backend, Database, Security e PO precisam validar alguma mudança de regra?
+
+
+## Modelo planejado da Sprint 4 — ainda não implementado
+
+A Sprint 4 introduzirá `handovers` e `handover_items` somente após aprovação deste readiness. Esta seção é contrato de implementação, não descrição do schema já executável.
+
+### `handovers`
+
+| Campo | Regra planejada |
+|---|---|
+| `id` | UUID, PK |
+| `tenant_id` | obrigatório; FK para `tenants` |
+| `window_start` | timestamptz UTC; início calculado do turno |
+| `window_end` | timestamptz UTC; fim calculado do turno |
+| `version` | inteiro >= 1; monotônico por tenant + janela |
+| `observations` | texto opcional; limite definido no contrato HTTP |
+| `finalized_by_subject` | ator resolvido server-side |
+| `finalized_at` | timestamptz UTC definido pelo servidor |
+| `created_at` | timestamptz UTC |
+
+Constraint obrigatória:
+
+```text
+UNIQUE (tenant_id, window_start, window_end, version)
+```
+
+Índices planejados:
+
+- `(tenant_id, finalized_at DESC)` para handover mais recente;
+- `(tenant_id, window_start DESC, version DESC)` para histórico por turno.
+
+### `handover_items`
+
+| Campo | Regra planejada |
+|---|---|
+| `id` | UUID, PK |
+| `handover_id` | obrigatório; FK para `handovers` com cascade no ambiente descartável apenas via remoção do pai fora do fluxo HTTP |
+| `incident_id` | obrigatório; FK para `incidents` |
+| `title_snapshot` | cópia do título no instante da finalização |
+| `affected_resource_snapshot` | cópia do recurso afetado |
+| `severity_snapshot` | severidade no snapshot |
+| `status_snapshot` | status no snapshot |
+| `started_at_snapshot` | início do incidente |
+| `last_event_message_snapshot` | último texto de evento disponível; nullable |
+| `last_event_at_snapshot` | instante do último evento disponível; nullable |
+
+Constraint obrigatória:
+
+```text
+UNIQUE (handover_id, incident_id)
+```
+
+### Atomicidade e concorrência
+
+- `handover` e todos os `handover_items` são criados na mesma transação;
+- a versão seguinte é calculada dentro da operação de finalização;
+- a unique constraint é a defesa final contra corrida;
+- colisão concorrente retorna conflito controlado e não faz retry silencioso que esconda a disputa;
+- não existe update/delete HTTP de handover finalizado;
+- não será criada tabela `shifts` na Sprint 4;
+- alterações em `tenants` para configuração de turno são aditivas e exigem backfill antes de `NOT NULL`.
+
+### Migration
+
+A migration da Sprint 4 deve ser aditiva: criar as duas tabelas, constraints e índices sem alterar colunas existentes de incidentes. As novas tabelas não exigem backfill; a extensão de configuração de turno em `tenants` exige backfill explícito antes de aplicar `NOT NULL`.
+
+
+### Extensão planejada de `tenants` para cálculo de turno
+
+A mesma migration da Sprint 4 deve adicionar:
+
+| Campo | Regra planejada |
+|---|---|
+| `shift_start_local` | `time` local, obrigatório após backfill |
+| `shift_duration_minutes` | inteiro obrigatório; entre 60 e 1440; deve dividir 1440 sem resto |
+
+O valor é configuração operacional do tenant, não parâmetro enviado a cada handover.
+
+Para tenants já existentes, a migration deve realizar backfill explícito antes de aplicar `NOT NULL`. O valor usado para o ambiente sintético deve ser documentado no seed/configuração; não deve ser tratado como regra universal de negócio.
+
+Não será criada tabela `shifts` na Sprint 4.
