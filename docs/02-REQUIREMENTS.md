@@ -61,13 +61,35 @@ Usuário autorizado deve poder reabrir incidente resolvido, mantendo o históric
 Templates devem ser versionados e renderizados a partir de dados estruturados.
 
 ### RF-012 — Passagem de turno
-O sistema deve gerar snapshot contendo incidentes abertos, incidentes relevantes resolvidos no turno, pendências e observações.
+O sistema deve gerar snapshot contendo incidentes abertos, incidentes relevantes resolvidos no turno e observações.
+
+#### Recorte canônico da Sprint 4 — US-012/US-013
+
+- preview é calculado server-side e não persiste draft;
+- finalização persiste snapshot imutável e versionado;
+- correção de handover finalizado cria nova versão;
+- seleção inclui incidentes ativos e incidentes com `INCIDENT_NORMALIZED` dentro da janela do turno;
+- cliente não é autoridade para tenant, ator, versão ou itens;
+- `handover:read` permite consulta; `handover:finalize` controla finalização;
+- Viewer pode consultar, mas não finalizar;
+- snapshot da Sprint 4 contém somente campos já disponíveis em Incident/IncidentEvent; protocolos e próximo passo estruturados entram apenas quando seus incrementos existirem.
 
 ### RF-013 — Busca
 Busca por unidade, identificador, protocolo, circuito, operadora, severidade, status e período.
 
 ### RF-014 — Dashboard
 Exibir contagens e filas acionáveis do plantão, sem substituir a lista detalhada.
+
+#### Recorte canônico da Sprint 4 — US-011
+
+A primeira versão apresenta somente métricas deriváveis do domínio executável:
+
+- total de incidentes ativos;
+- total de incidentes CRITICAL ativos;
+- total de incidentes normalizados na janela atual;
+- fila ativa ordenada por severidade e antiguidade.
+
+Métricas de SLA, “aguardando terceiro” e atraso de atualização ficam fora do recorte até existirem regras de domínio próprias.
 
 ### RF-015 — Auditoria
 Mudanças administrativas, de permissão e de estado do incidente devem gerar eventos de auditoria.
