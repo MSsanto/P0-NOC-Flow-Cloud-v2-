@@ -16,7 +16,7 @@ import { AuthContextService } from './core/auth/auth-context.service';
         <div>
           <div class="brand">
             <strong>NOC Flow Cloud v2</strong>
-            <span class="environment-badge" aria-label="Versão alpha">alpha</span>
+            <span class="environment-badge" aria-label="Release candidate">rc</span>
           </div>
 
           <div class="identity" aria-live="polite">
