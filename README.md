@@ -2,7 +2,7 @@
 
 > Plataforma web de portfólio para o ciclo operacional de incidentes em NOC, construída com Angular, FastAPI, PostgreSQL, Docker e GitHub Actions.
 
-**Status:** 🟢 Sprint 4 — Dashboard & Passagem de Turno concluída tecnicamente; aguardando homologação manual  
+**Status:** 🟢 Sprint 4 — Dashboard & Passagem de Turno concluída e homologada para demo privada  
 **Release candidata:** `v0.4.0-beta`  
 **Autor:** Matheus Santo  
 **Repositório:** `MSsanto/P0-NOC-Flow-Cloud-v2-`
@@ -33,7 +33,7 @@ O produto já permite:
 - preservar snapshots mesmo após o incidente original mudar;
 - aplicar permissions `handover:read` e `handover:finalize`.
 
-A execução local mantém um provider sintético isolado para desenvolvimento. A demo privada já suporta identidade confiável por **Cloudflare Access** ou **OIDC genérico**, com autorização server-side, memberships internas e isolamento por tenant. Produção pública continua bloqueada até homologação da candidata `v0.4.0-beta`.
+A execução local mantém um provider sintético isolado para desenvolvimento. A demo privada já suporta identidade confiável por **Cloudflare Access** ou **OIDC genérico**, com autorização server-side, memberships internas e isolamento por tenant. Produção pública continua bloqueada; a `v0.4.0-beta` está homologada somente para ambiente local e demo privada protegida.
 
 ## Stack executável
 
@@ -209,7 +209,7 @@ A candidata beta inclui validação de tokens OIDC/JWT, integração com Cloudfl
 
 A timeline é append-only no fluxo suportado e as ações validam o estado do incidente. Recursos fora do tenant ativo não são expostos pela API suportada.
 
-A `v0.4.0-beta` é homologável como ambiente local e demo privada protegida. O provider demo é restrito a `development`/`test`; ambientes protegidos exigem identidade externa validada. Produção pública permanece bloqueada por design até a homologação e o hardening final.
+A `v0.4.0-beta` está homologada para ambiente local e demo privada protegida. O provider demo é restrito a `development`/`test`; ambientes protegidos exigem identidade externa validada. Produção pública permanece bloqueada por design até a homologação e o hardening final.
 
 ## Arquitetura resumida
 
@@ -261,7 +261,7 @@ Destaques:
 - **Sprint 1:** fundação executável e CRUD inicial de incidentes — concluída;
 - **Sprint 2:** atualizações, normalização, timeline e filtros — concluída tecnicamente;
 - **Sprint 3:** autenticação, RBAC e multi-tenancy confiável — concluída tecnicamente;
-- **Sprint 4:** dashboard e passagem de turno — concluída tecnicamente, aguardando homologação;
+- **Sprint 4:** dashboard e passagem de turno — concluída e homologada para demo privada;
 - **Sprint 5:** auditoria e observabilidade;
 - **Sprint 6:** Azure e release v1.0.
 
