@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthContextService } from './core/auth/auth-context.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a class="skip-link" href="#main-content">Pular para o conteúdo principal</a>
@@ -30,6 +30,13 @@ import { AuthContextService } from './core/auth/auth-context.service';
             }
           </div>
         </div>
+        <nav class="primary-nav" aria-label="Navegação principal">
+          <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
+          <a routerLink="/incidents" routerLinkActive="active">Incidentes</a>
+          @if (auth.can('handover:read')) {
+            <a routerLink="/handovers" routerLinkActive="active">Passagem de turno</a>
+          }
+        </nav>
       </header>
 
       <main id="main-content" class="app-main" tabindex="-1">
@@ -71,7 +78,7 @@ import { AuthContextService } from './core/auth/auth-context.service';
       border-block-end: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
     }
 
-    .app-header > div {
+    .app-header > div, .primary-nav {
       max-width: 90rem;
       margin-inline: auto;
       display: flex;
@@ -80,7 +87,7 @@ import { AuthContextService } from './core/auth/auth-context.service';
       gap: 1rem;
     }
 
-    .brand, .identity {
+    .brand, .identity, .primary-nav {
       display: flex;
       align-items: center;
       gap: 0.75rem;
@@ -103,6 +110,24 @@ import { AuthContextService } from './core/auth/auth-context.service';
 
     .environment-badge {
       text-transform: uppercase;
+    }
+
+    .primary-nav {
+      margin: .8rem auto 0;
+      gap: .35rem;
+      flex-wrap: wrap;
+    }
+
+    .primary-nav a {
+      color: inherit;
+      text-decoration: none;
+      padding: .45rem .7rem;
+      border-radius: .5rem;
+      border: 1px solid transparent;
+    }
+
+    .primary-nav a:hover, .primary-nav a.active {
+      border-color: color-mix(in srgb, CanvasText 24%, transparent);
     }
 
     .app-main {
