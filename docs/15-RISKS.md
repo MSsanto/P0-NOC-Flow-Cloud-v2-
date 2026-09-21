@@ -23,6 +23,11 @@
 | R-19 | Snapshot copiar campos futuros/inexistentes e acoplar Sprint 4 a backlog não entregue | Média | Médio | snapshot contém somente dados executáveis; expansão apenas por requisito posterior |
 | R-20 | Cálculo incorreto de janela por timezone/DST ou configuração ambígua | Baixa/Média | Alto | timezone IANA + anchor/duração por tenant + testes de boundary/DST; persistir limites UTC no snapshot |
 
+| R-21 | Auditoria divergir da transação de negócio | Média | Alto | gravar audit event na mesma Session antes do commit e testar rollback |
+| R-22 | Observabilidade vazar payload/token | Média | Crítico | allowlist de campos, sem bodies/headers sensíveis, testes de redaction |
+| R-23 | Request ID permitir log injection | Baixa | Alto | regex/limite estritos e geração server-side quando inválido |
+| R-24 | Audit API permitir enumeração cross-tenant | Média | Alto | tenant scoping + audit:read restrito + testes negativos |
+
 ## Critérios de escalonamento
 
 Risco `Crítico` bloqueia release enquanto não houver mitigação implementada ou aceitação documentada. Riscos que mudem arquitetura geram ADR.
