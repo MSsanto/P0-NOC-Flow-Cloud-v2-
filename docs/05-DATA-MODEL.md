@@ -4,7 +4,7 @@
 
 Definir o modelo físico vigente do NOC Flow Cloud v2 com foco em integridade, isolamento por tenant, rastreabilidade, migrations reproduzíveis e evolução compatível com o roadmap.
 
-**Estado atual:** Sprint 3 concluída tecnicamente. O schema executável possui `tenants`, `users`, `tenant_memberships`, `incidents` e `incident_events`.
+**Estado atual:** Sprint 4 concluída tecnicamente. O schema executável possui `tenants`, `users`, `tenant_memberships`, `incidents`, `incident_events`, `handovers` e `handover_items`.
 
 ## Decisões vigentes
 
@@ -18,7 +18,7 @@ Definir o modelo físico vigente do NOC Flow Cloud v2 com foco em integridade, i
 - A timeline é append-only no fluxo suportado: não existe endpoint de update/delete de evento.
 - Dados públicos/de portfólio devem ser exclusivamente sintéticos.
 
-## ER — estado após Sprint 3
+## ER — base vigente após Sprint 4
 
 ```mermaid
 erDiagram
@@ -256,13 +256,13 @@ Toda mudança de schema deve responder:
 9. Backend, Database, Security e PO precisam validar alguma mudança de regra?
 
 
-## Modelo planejado da Sprint 4 — ainda não implementado
+## Modelo implementado na Sprint 4
 
-A Sprint 4 introduzirá `handovers` e `handover_items` somente após aprovação deste readiness. Esta seção é contrato de implementação, não descrição do schema já executável.
+A Sprint 4 introduziu `handovers`, `handover_items` e a configuração de turno no tenant por meio da migration `20260921_0004_shift_handovers.py`.
 
 ### `handovers`
 
-| Campo | Regra planejada |
+| Campo | Regra vigente |
 |---|---|
 | `id` | UUID, PK |
 | `tenant_id` | obrigatório; FK para `tenants` |
@@ -287,7 +287,7 @@ UNIQUE (tenant_id, window_start, window_end, version)
 
 ### `handover_items`
 
-| Campo | Regra planejada |
+| Campo | Regra vigente |
 |---|---|
 | `id` | UUID, PK |
 | `handover_id` | obrigatório; FK para `handovers` com cascade no ambiente descartável apenas via remoção do pai fora do fluxo HTTP |
@@ -321,11 +321,11 @@ UNIQUE (handover_id, incident_id)
 A migration da Sprint 4 deve ser aditiva: criar as duas tabelas, constraints e índices sem alterar colunas existentes de incidentes. As novas tabelas não exigem backfill; a extensão de configuração de turno em `tenants` exige backfill explícito antes de aplicar `NOT NULL`.
 
 
-### Extensão planejada de `tenants` para cálculo de turno
+### Extensão de `tenants` para cálculo de turno
 
 A mesma migration da Sprint 4 deve adicionar:
 
-| Campo | Regra planejada |
+| Campo | Regra vigente |
 |---|---|
 | `shift_start_local` | `time` local, obrigatório após backfill |
 | `shift_duration_minutes` | inteiro obrigatório; entre 60 e 1440; deve dividir 1440 sem resto |
