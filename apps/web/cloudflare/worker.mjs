@@ -1218,7 +1218,7 @@ async function listSimpleIncidents(env, context) {
   return (result.results ?? []).map(mapIncident);
 }
 
-async function createIncident(env, context, request) {
+async function createIncident(env, context, request, requestId) {
   requirePermission(context, "incident:create");
   const payload = validateIncidentCreate(await readJson(request));
   const now = new Date().toISOString();
@@ -1250,6 +1250,7 @@ async function createIncident(env, context, request) {
         id, tenant_id, incident_id, event_type, message, actor_subject, occurred_at
       ) VALUES (?, ?, ?, 'INCIDENT_CREATED', NULL, ?, ?)
     `).bind(eventId, context.tenant_id, id, context.actor_subject, now),
+    auditStatement(env, context, requestId, "incident.created", "incident", id, now),
   ]);
 
   return mapIncident(await getRequiredIncident(env, context.tenant_id, id));
@@ -1260,7 +1261,7 @@ async function getIncident(env, context, incidentId) {
   return mapIncident(await getRequiredIncident(env, context.tenant_id, incidentId));
 }
 
-async function addIncidentUpdate(env, context, incidentId, request) {
+async function addIncidentUpdate(env, context, incidentId, request, requestId) {
   requirePermission(context, "incident:update");
   const payload = validateIncidentUpdate(await readJson(request));
   const current = await getRequiredIncident(env, context.tenant_id, incidentId);
@@ -1294,12 +1295,21 @@ async function addIncidentUpdate(env, context, incidentId, request) {
       context.actor_subject,
       now,
     ),
+    auditStatement(
+      env,
+      context,
+      requestId,
+      "incident.updated",
+      "incident",
+      incidentId,
+      now,
+    ),
   ]);
 
   return mapIncident(await getRequiredIncident(env, context.tenant_id, incidentId));
 }
 
-async function normalizeIncident(env, context, incidentId, request) {
+async function normalizeIncident(env, context, incidentId, request, requestId) {
   requirePermission(context, "incident:normalize");
   const payload = validateIncidentNormalize(await readJson(request));
   const current = await getRequiredIncident(env, context.tenant_id, incidentId);
@@ -1331,6 +1341,15 @@ async function normalizeIncident(env, context, incidentId, request) {
       incidentId,
       payload.note,
       context.actor_subject,
+      now,
+    ),
+    auditStatement(
+      env,
+      context,
+      requestId,
+      "incident.normalized",
+      "incident",
+      incidentId,
       now,
     ),
   ]);
@@ -1393,6 +1412,56 @@ async function routeApi(request, env, requestId) {
     );
   }
 
+  if (path === `${API_PREFIX}/dashboard/summary`) {
+    if (request.method !== "GET") methodNotAllowed();
+    return jsonResponse(await dashboardSummary(env, context), requestId);
+  }
+
+  if (path === `${API_PREFIX}/handovers/preview`) {
+    if (request.method !== "GET") methodNotAllowed();
+    return jsonResponse(await handoverPreview(env, context), requestId);
+  }
+
+  if (path === `${API_PREFIX}/handovers/latest`) {
+    if (request.method !== "GET") methodNotAllowed();
+    return jsonResponse(await latestHandover(env, context), requestId);
+  }
+
+  if (path === `${API_PREFIX}/handovers`) {
+    if (request.method === "GET") {
+      return jsonResponse(await handoverHistory(env, context, url), requestId);
+    }
+    if (request.method === "POST") {
+      return jsonResponse(
+        await finalizeHandover(env, context, request, requestId),
+        requestId,
+        201,
+      );
+    }
+    methodNotAllowed();
+  }
+
+  const handoverDetailMatch = path.match(/^\/api\/v1\/handovers\/([^/]+)$/);
+  if (handoverDetailMatch) {
+    if (request.method !== "GET") methodNotAllowed();
+    const handoverId = handoverDetailMatch[1];
+    if (!validIncidentId(handoverId)) {
+      throw problem(
+        422,
+        "Request validation failed",
+        "handover_id must be a valid UUID.",
+        "REQUEST_VALIDATION_FAILED",
+        "request-validation-failed",
+      );
+    }
+    return jsonResponse(await getHandoverById(env, context, handoverId), requestId);
+  }
+
+  if (path === `${API_PREFIX}/audit-events`) {
+    if (request.method !== "GET") methodNotAllowed();
+    return jsonResponse(await listAuditEvents(env, context, url), requestId);
+  }
+
   if (path === `${API_PREFIX}/incidents/query`) {
     if (request.method !== "GET") methodNotAllowed();
     return jsonResponse(await listIncidents(env, context, url), requestId);
@@ -1403,7 +1472,11 @@ async function routeApi(request, env, requestId) {
       return jsonResponse(await listSimpleIncidents(env, context), requestId);
     }
     if (request.method === "POST") {
-      return jsonResponse(await createIncident(env, context, request), requestId, 201);
+      return jsonResponse(
+        await createIncident(env, context, request, requestId),
+        requestId,
+        201,
+      );
     }
     methodNotAllowed();
   }
@@ -1440,7 +1513,7 @@ async function routeApi(request, env, requestId) {
       );
     }
     return jsonResponse(
-      await addIncidentUpdate(env, context, incidentId, request),
+      await addIncidentUpdate(env, context, incidentId, request, requestId),
       requestId,
     );
   }
@@ -1461,7 +1534,7 @@ async function routeApi(request, env, requestId) {
       );
     }
     return jsonResponse(
-      await normalizeIncident(env, context, incidentId, request),
+      await normalizeIncident(env, context, incidentId, request, requestId),
       requestId,
     );
   }
