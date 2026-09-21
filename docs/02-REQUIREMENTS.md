@@ -9,7 +9,7 @@ O sistema deve identificar o usuário por um provedor OIDC/OAuth2 e criar sessã
 O usuário deve acessar somente operações às quais possui vínculo ativo.
 
 ### RF-003 — Papéis
-Papéis mínimos: `platform_admin`, `tenant_admin`, `supervisor`, `analyst`, `viewer`.
+O incremento atual utiliza os papéis internos `Admin`, `Supervisor`, `Operator` e `Viewer`, resolvidos a partir de `tenant_memberships`. O token externo não é autoridade de role ou permissão. Evoluções para administração de plataforma/tenant devem ser introduzidas por requisito e migration próprios, sem reinterpretar silenciosamente os papéis existentes.
 
 ### RF-004 — Base operacional
 Administradores devem manter unidades, circuitos, operadoras, contatos, severidades e templates.
@@ -38,7 +38,7 @@ Campos definidos pelo sistema/contexto e que não são autoridade do body:
 - ator/criador resolvido pelo backend;
 - `created_at` e `updated_at`.
 
-Durante a Sprint 1, tenant e ator podem vir de um provider de desenvolvimento/demo explicitamente isolado e sintético. Isso não substitui OIDC, memberships e RBAC planejados para a Sprint 3.
+Durante a Sprint 1, tenant e ator podiam vir de um provider de desenvolvimento/demo explicitamente isolado e sintético. Desde a Sprint 3, ambientes protegidos usam identidade validada por Cloudflare Access ou OIDC genérico, com memberships internas e RBAC server-side; o provider demo permanece restrito a `development`/`test`.
 
 A evolução para unidade/site, origem e severidade configurável ocorrerá por histórias e migrations posteriores. Os nomes e regras acima são o contrato canônico da US-002 e devem ser refletidos em OpenAPI, frontend, banco e testes da Sprint 1.
 
