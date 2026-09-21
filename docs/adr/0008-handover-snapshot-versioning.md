@@ -47,7 +47,15 @@ A versão é monotônica dentro da combinação tenant + janela de turno.
 
 ### Shift
 
-Na Sprint 4, a janela de turno é calculada pela configuração/timezone do tenant. Não será criada uma entidade persistente `Shift` apenas para representar calendário enquanto não existir necessidade adicional comprovada.
+Na Sprint 4, a janela de turno é calculada pelo backend a partir de três atributos do tenant:
+
+- `timezone`: timezone IANA;
+- `shift_start_local`: horário local que ancora o primeiro turno do ciclo diário;
+- `shift_duration_minutes`: duração do turno.
+
+A Sprint 4 usa duração máxima de 24 horas e exige que 24h seja divisível pela duração configurada para evitar janelas irregulares no primeiro incremento.
+
+Não será criada entidade persistente `Shift`: turno é um value object calculado. Em transições de horário civil/DST, o cálculo parte do horário local do tenant e converte limites para UTC usando timezone IANA, sem somar offsets fixos manualmente.
 
 ### Concorrência
 
