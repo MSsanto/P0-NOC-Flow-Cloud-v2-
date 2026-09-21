@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi.testclient import TestClient
-from sqlalchemy import delete, select
+from sqlalchemy import select
 
 from app.db.session import get_session_factory
 from app.main import app
