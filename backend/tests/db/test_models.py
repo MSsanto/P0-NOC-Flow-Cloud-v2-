@@ -1,5 +1,11 @@
 from app.db.base import Base
-from app.db.models import HandoverItemModel, HandoverModel, IncidentEventModel, IncidentModel, TenantModel
+from app.db.models import (
+    HandoverItemModel,
+    HandoverModel,
+    IncidentEventModel,
+    IncidentModel,
+    TenantModel,
+)
 
 
 def test_sprint2_metadata_registers_tenant_incident_and_timeline() -> None:
