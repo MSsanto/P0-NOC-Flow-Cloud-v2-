@@ -1,5 +1,5 @@
 from app.db.base import Base
-from app.db.models import IncidentEventModel, IncidentModel, TenantModel
+from app.db.models import HandoverItemModel, HandoverModel, IncidentEventModel, IncidentModel, TenantModel
 
 
 def test_sprint2_metadata_registers_tenant_incident_and_timeline() -> None:
@@ -57,3 +57,17 @@ def test_incident_contract_columns_are_present() -> None:
         "updated_at",
         "version",
     } <= column_names
+
+
+def test_sprint4_metadata_registers_handover_tables_and_shift_config() -> None:
+    assert HandoverModel.__table__ is Base.metadata.tables["handovers"]
+    assert HandoverItemModel.__table__ is Base.metadata.tables["handover_items"]
+    tenant_columns = set(TenantModel.__table__.columns.keys())
+    assert {"shift_start_local", "shift_duration_minutes"} <= tenant_columns
+
+
+def test_handover_schema_has_version_and_snapshot_constraints() -> None:
+    handover_constraints = {c.name for c in HandoverModel.__table__.constraints}
+    item_constraints = {c.name for c in HandoverItemModel.__table__.constraints}
+    assert "uq_handovers_tenant_window_version" in handover_constraints
+    assert "uq_handover_items_handover_incident" in item_constraints
