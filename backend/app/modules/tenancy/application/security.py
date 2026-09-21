@@ -13,6 +13,8 @@ class Permission(StrEnum):
     INCIDENT_CREATE = "incident:create"
     INCIDENT_UPDATE = "incident:update"
     INCIDENT_NORMALIZE = "incident:normalize"
+    HANDOVER_READ = "handover:read"
+    HANDOVER_FINALIZE = "handover:finalize"
 
 
 _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
@@ -23,6 +25,8 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.INCIDENT_CREATE,
             Permission.INCIDENT_UPDATE,
             Permission.INCIDENT_NORMALIZE,
+            Permission.HANDOVER_READ,
+            Permission.HANDOVER_FINALIZE,
         }
     ),
     Role.OPERATOR: frozenset(
@@ -31,9 +35,11 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.INCIDENT_CREATE,
             Permission.INCIDENT_UPDATE,
             Permission.INCIDENT_NORMALIZE,
+            Permission.HANDOVER_READ,
+            Permission.HANDOVER_FINALIZE,
         }
     ),
-    Role.VIEWER: frozenset({Permission.INCIDENT_READ}),
+    Role.VIEWER: frozenset({Permission.INCIDENT_READ, Permission.HANDOVER_READ}),
 }
 
 
