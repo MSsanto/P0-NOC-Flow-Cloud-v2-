@@ -63,10 +63,13 @@ def test_role_permissions_follow_least_privilege() -> None:
     viewer = permissions_for_roles(frozenset({Role.VIEWER}))
     operator = permissions_for_roles(frozenset({Role.OPERATOR}))
 
-    assert viewer == frozenset({Permission.INCIDENT_READ})
+    assert viewer == frozenset({Permission.INCIDENT_READ, Permission.HANDOVER_READ})
     assert Permission.INCIDENT_CREATE in operator
     assert Permission.INCIDENT_UPDATE in operator
     assert Permission.INCIDENT_NORMALIZE in operator
+    assert Permission.HANDOVER_READ in operator
+    assert Permission.HANDOVER_FINALIZE in operator
+    assert Permission.HANDOVER_FINALIZE not in viewer
 
 
 def test_permission_dependency_returns_403_for_viewer_write() -> None:
