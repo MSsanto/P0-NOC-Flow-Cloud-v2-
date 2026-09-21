@@ -96,7 +96,21 @@ Nome, ordem, prazo alvo e regras visuais configuráveis.
 Template versionado por tipo e tenant.
 
 ### Shift
-Na Sprint 4, `Shift` é uma janela calculada a partir da timezone/configuração do tenant e não uma entidade persistente. Persistência própria fica adiada até existir necessidade adicional comprovada.
+Na Sprint 4, `Shift` é um value object calculado e não uma entidade persistente.
+
+Entradas:
+
+- `Tenant.timezone`;
+- `Tenant.shift_start_local`;
+- `Tenant.shift_duration_minutes`;
+- instante atual fornecido pelo clock da aplicação.
+
+Saída:
+
+- `window_start` UTC;
+- `window_end` UTC.
+
+O cálculo deve respeitar timezone IANA e mudanças de horário civil/DST.
 
 ### Handover
 Snapshot versionado produzido para uma troca de turno.
