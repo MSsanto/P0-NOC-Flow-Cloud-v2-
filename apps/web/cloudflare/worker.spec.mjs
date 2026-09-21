@@ -101,14 +101,20 @@ describe("Cloudflare private demo contract helpers", () => {
   });
 
   it("keeps RBAC parity with the canonical backend", () => {
-    expect(permissionsForRole("Viewer")).toEqual(["incident:read"]);
+    expect(permissionsForRole("Viewer")).toEqual([
+      "incident:read",
+      "handover:read",
+    ]);
     expect(permissionsForRole("Operator")).toEqual([
       "incident:read",
       "incident:create",
       "incident:update",
       "incident:normalize",
+      "handover:read",
+      "handover:finalize",
     ]);
-    expect(permissionsForRole("Admin")).toHaveLength(4);
+    expect(permissionsForRole("Supervisor")).toContain("audit:read");
+    expect(permissionsForRole("Admin")).toContain("audit:read");
     expect(permissionsForRole("Unknown")).toEqual([]);
   });
 

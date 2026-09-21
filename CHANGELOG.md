@@ -39,6 +39,12 @@ Este projeto segue a estrutura do Keep a Changelog para registrar incrementos re
 - permissions `handover:read` e `handover:finalize`;
 - Sprint 4 Functional Smoke atravessando Nginx → FastAPI → PostgreSQL;
 - testes de cálculo de turno, metadata, OpenAPI e fluxo integrado de handover;
+- audit trail append-only e tenant-scoped;
+- permission `audit:read` para Admin/Supervisor;
+- endpoint `GET /api/v1/audit-events`;
+- logging JSON de requests com correlation ID;
+- Sprint 5 Functional Smoke;
+- paridade Dashboard/Handover/Audit no adapter Cloudflare Worker/D1;
 - roteiros reproduzíveis de homologação das candidatas `v0.1.0-alpha` e `v0.2.0-alpha`.
 
 ### Fixed
@@ -70,4 +76,4 @@ Este projeto segue a estrutura do Keep a Changelog para registrar incrementos re
 
 ### Note
 
-A `v0.4.0-beta` foi homologada em 21/09/2026 para ambiente local e demo privada protegida por Cloudflare Access/OIDC. OIDC, RBAC e isolamento multi-tenant estão implementados e validados no CI. Nenhum deploy público/produção está autorizado. Não há tag/GitHub Release publicada neste estágio.
+A candidata atual é `v0.5.0-rc1`. A `v0.4.0-beta` foi homologada em 21/09/2026 para ambiente local e demo privada protegida por Cloudflare Access/OIDC. OIDC, RBAC e isolamento multi-tenant estão implementados e validados no CI. Nenhum deploy público/produção está autorizado. Não há tag/GitHub Release publicada neste estágio.

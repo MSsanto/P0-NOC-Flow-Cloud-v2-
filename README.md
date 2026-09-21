@@ -2,8 +2,8 @@
 
 > Plataforma web de portfólio para o ciclo operacional de incidentes em NOC, construída com Angular, FastAPI, PostgreSQL, Docker e GitHub Actions.
 
-**Status:** 🟢 Sprint 4 — Dashboard & Passagem de Turno concluída e homologada para demo privada  
-**Release candidata:** `v0.4.0-beta`  
+**Status:** 🟢 Sprint 5 — Auditoria & Observabilidade implementada; candidata `v0.5.0-rc1`  
+**Release candidata:** `v0.5.0-rc1`  
 **Autor:** Matheus Santo  
 **Repositório:** `MSsanto/P0-NOC-Flow-Cloud-v2-`
 
@@ -31,7 +31,11 @@ O produto já permite:
 - finalizar passagem como snapshot versionado e imutável;
 - consultar latest, histórico paginado e versões específicas de handover;
 - preservar snapshots mesmo após o incidente original mudar;
-- aplicar permissions `handover:read` e `handover:finalize`.
+- aplicar permissions `handover:read` e `handover:finalize`;
+- consultar trilha de auditoria tenant-scoped para Admin/Supervisor;
+- correlacionar requests via `X-Request-ID`;
+- emitir logs HTTP estruturados sem body/token/cookie;
+- auditar create/update/normalize de incidente e finalização de handover.
 
 A execução local mantém um provider sintético isolado para desenvolvimento. A demo privada já suporta identidade confiável por **Cloudflare Access** ou **OIDC genérico**, com autorização server-side, memberships internas e isolamento por tenant. Produção pública continua bloqueada; a `v0.4.0-beta` está homologada somente para ambiente local e demo privada protegida.
 
@@ -144,6 +148,7 @@ npm run build
 
 ```text
 GET  /api/v1/auth/me
+GET  /api/v1/audit-events
 GET  /api/v1/dashboard/summary
 GET  /api/v1/handovers/preview
 POST /api/v1/handovers
@@ -262,7 +267,7 @@ Destaques:
 - **Sprint 2:** atualizações, normalização, timeline e filtros — concluída tecnicamente;
 - **Sprint 3:** autenticação, RBAC e multi-tenancy confiável — concluída tecnicamente;
 - **Sprint 4:** dashboard e passagem de turno — concluída e homologada para demo privada;
-- **Sprint 5:** auditoria e observabilidade;
+- **Sprint 5:** auditoria e observabilidade — implementada tecnicamente;
 - **Sprint 6:** Azure e release v1.0.
 
 Integrações com monitoramento/notificações (Zabbix + WhatsApp/Evolution) e ITSM (Plusoft/GLPI/Zammad) permanecem no backlog de evolução e não fazem parte da alpha atual.

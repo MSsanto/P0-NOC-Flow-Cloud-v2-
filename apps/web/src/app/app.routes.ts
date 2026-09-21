@@ -19,6 +19,14 @@ export const appRoutes: Routes = [
     title: 'Passagem de turno · NOC Flow Cloud v2',
   },
   {
+    path: 'audit',
+    loadComponent: () =>
+      import('./features/audit/audit-page.component').then(
+        (module) => module.AuditPageComponent,
+      ),
+    title: 'Auditoria · NOC Flow Cloud v2',
+  },
+  {
     path: 'incidents',
     loadComponent: () =>
       import('./features/incidents/incident-list-page.component').then(

@@ -15,12 +15,14 @@ class Permission(StrEnum):
     INCIDENT_NORMALIZE = "incident:normalize"
     HANDOVER_READ = "handover:read"
     HANDOVER_FINALIZE = "handover:finalize"
+    AUDIT_READ = "audit:read"
 
 
 _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
     Role.ADMIN: frozenset(Permission),
     Role.SUPERVISOR: frozenset(
         {
+            Permission.AUDIT_READ,
             Permission.INCIDENT_READ,
             Permission.INCIDENT_CREATE,
             Permission.INCIDENT_UPDATE,

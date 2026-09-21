@@ -1,0 +1,108 @@
+name: Sprint 5 Functional Smoke
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sprint5-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and start stack
+        run: docker compose up -d --build
+
+      - name: Validate audit and request correlation
+        run: |
+          python - <<'PY'
+          from datetime import UTC, datetime, timedelta
+          import json
+          import time
+          import urllib.error
+          import urllib.request
+
+          def wait_ok(url: str) -> None:
+              for _ in range(60):
+                  try:
+                      with urllib.request.urlopen(url, timeout=2) as response:
+                          if response.status == 200:
+                              return
+                  except (urllib.error.URLError, ConnectionError):
+                      time.sleep(1)
+              raise SystemExit(f"Smoke failed for {url}")
+
+          def request_json(url: str, *, method: str = "GET", payload=None, request_id=None):
+              data = None if payload is None else json.dumps(payload).encode()
+              headers = {"Content-Type": "application/json"}
+              if request_id:
+                  headers["X-Request-ID"] = request_id
+              request = urllib.request.Request(url, data=data, method=method, headers=headers)
+              with urllib.request.urlopen(request, timeout=5) as response:
+                  raw = response.read().decode()
+                  return (
+                      response.status,
+                      json.loads(raw) if raw else None,
+                      response.headers.get("X-Request-ID"),
+                  )
+
+          wait_ok("http://127.0.0.1:8000/api/v1/health/ready")
+          wait_ok("http://127.0.0.1:4200/")
+
+          api = "http://127.0.0.1:4200/api/v1"
+          request_id = "sprint5-smoke-create"
+          status, created, echoed = request_json(
+              f"{api}/incidents",
+              method="POST",
+              request_id=request_id,
+              payload={
+                  "title": "Sprint 5 audit smoke",
+                  "affected_resource": "DEMO-S5-EDGE-01",
+                  "severity": "HIGH",
+                  "impact_type": "OUTAGE",
+                  "symptoms": "Synthetic incident for Sprint 5 audit validation.",
+                  "started_at": (datetime.now(UTC) - timedelta(minutes=5)).isoformat(),
+              },
+          )
+          assert status == 201
+          assert echoed == request_id
+          incident_id = created["id"]
+
+          status, _, echoed_update = request_json(
+              f"{api}/incidents/{incident_id}/updates",
+              method="POST",
+              request_id="sprint5-smoke-update",
+              payload={"message": "Synthetic audited update."},
+          )
+          assert status == 200
+          assert echoed_update == "sprint5-smoke-update"
+
+          status, audit, _ = request_json(f"{api}/audit-events?page_size=100")
+          assert status == 200
+          related = [item for item in audit["items"] if item["resource_id"] == incident_id]
+          actions = {item["action"] for item in related}
+          assert {"incident.created", "incident.updated"} <= actions
+          ids = {item["request_id"] for item in related}
+          assert "sprint5-smoke-create" in ids
+          assert "sprint5-smoke-update" in ids
+
+          serialized = json.dumps(related)
+          assert "Synthetic audited update." not in serialized
+          assert "Synthetic incident for Sprint 5 audit validation." not in serialized
+
+          print("Sprint 5 functional smoke OK", incident_id)
+          PY
+
+      - name: Show container status on failure
+        if: failure()
+        run: docker compose ps && docker compose logs --no-color
+
+      - name: Stop stack
+        if: always()
+        run: docker compose down -v

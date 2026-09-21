@@ -17,6 +17,7 @@ class AuthContextStub {
       'incident:normalize',
       'handover:read',
       'handover:finalize',
+      'audit:read',
     ],
   });
   readonly loading = signal(false);
