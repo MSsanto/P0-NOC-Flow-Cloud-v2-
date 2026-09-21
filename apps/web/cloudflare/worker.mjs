@@ -65,6 +65,13 @@ function problem(status, title, detail, code, slug) {
   return new ApiProblem(status, title, detail, code, slug);
 }
 
+function resolveRequestId(candidate) {
+  return typeof candidate === "string" &&
+    /^[A-Za-z0-9._:-]{1,128}$/.test(candidate)
+    ? candidate
+    : crypto.randomUUID();
+}
+
 function responseHeaders(requestId, contentType = "application/json; charset=utf-8") {
   return {
     "content-type": contentType,
@@ -1570,27 +1577,40 @@ export default {
       return env.ASSETS.fetch(request);
     }
 
-    const requestId = crypto.randomUUID();
+    const requestId = resolveRequestId(request.headers.get("x-request-id"));
+    const started = Date.now();
+    let response;
     try {
-      return await routeApi(request, env, requestId);
+      response = await routeApi(request, env, requestId);
     } catch (error) {
       if (error instanceof ApiProblem) {
-        return problemResponse(error, requestId);
+        response = problemResponse(error, requestId);
+      } else {
+        console.error(JSON.stringify({
+          event: "cloudflare_private_demo_unhandled",
+          request_id: requestId,
+          message: error instanceof Error ? error.message : String(error),
+        }));
+        response = problemResponse(
+          problem(
+            500,
+            "Internal server error",
+            "The private demo could not complete the request.",
+            "INTERNAL_SERVER_ERROR",
+            "internal-server-error",
+          ),
+          requestId,
+        );
       }
-      console.error("cloudflare_private_demo_unhandled", {
-        request_id: requestId,
-        message: error instanceof Error ? error.message : String(error),
-      });
-      return problemResponse(
-        problem(
-          500,
-          "Internal server error",
-          "The private demo could not complete the request.",
-          "INTERNAL_SERVER_ERROR",
-          "internal-server-error",
-        ),
-        requestId,
-      );
     }
+    console.log(JSON.stringify({
+      event: "http_request",
+      request_id: requestId,
+      method: request.method,
+      path: new URL(request.url).pathname,
+      status_code: response.status,
+      duration_ms: Date.now() - started,
+    }));
+    return response;
   },
 };
