@@ -1398,10 +1398,18 @@ async function routeApi(request, env, requestId) {
   const url = new URL(request.url);
   const path = url.pathname;
 
-  if (path === `${API_PREFIX}/health/live` || path === `${API_PREFIX}/health/ready`) {
+  if (path === `${API_PREFIX}/health/live`) {
+    if (request.method !== "GET") methodNotAllowed();
+    return jsonResponse({ status: "ok" }, requestId);
+  }
+
+  if (path === `${API_PREFIX}/health/ready`) {
     if (request.method !== "GET") methodNotAllowed();
     await ensureSchema(env);
-    return jsonResponse({ status: "ok" }, requestId);
+    return jsonResponse(
+      { status: "ready", checks: { database: "up" } },
+      requestId,
+    );
   }
 
   const context = await resolveRequestContext(env, request);
