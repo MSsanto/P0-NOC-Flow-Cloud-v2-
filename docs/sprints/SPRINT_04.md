@@ -52,7 +52,26 @@ GET  /api/v1/handovers/{handover_id}
 
 ## Evidências automatizadas
 
-Na rodada validada do PR de implementação:
+**Commit candidato pós-merge:** `9c3a8de004f44ecf783c1417e9096b1511a104c8`.
+
+Pós-merge na `main`:
+
+- CI — run `35635569932` — success;
+- Sprint 2 Functional Smoke — run `35635569745` — success;
+- Sprint 4 Functional Smoke — run `35635570006` — success;
+- Private Demo Compose — run `35635570151` — success;
+- Cloudflare Private Full-Stack — run `35635569931` — success.
+
+No head final do PR #50:
+
+- Frontend Foundation — run `35635345055` — success;
+- CI — run `35635344969` — success;
+- Sprint 2 Functional Smoke — run `35635344962` — success;
+- Sprint 4 Functional Smoke — run `35635345136` — success;
+- Private Demo Compose — run `35635344957` — success;
+- Cloudflare Private Full-Stack — run `35635345091` — success.
+
+A rodada validada também comprova:
 
 - Backend Ruff — success;
 - Alembic/PostgreSQL — success;
@@ -83,4 +102,4 @@ Na rodada validada do PR de implementação:
 
 Somente a homologação manual da experiência: leitura visual do Dashboard/Passagem, clareza da confirmação de snapshot imutável, comportamento de foco/teclado e acesso real à demo privada protegida.
 
-O roteiro está em `docs/releases/V0.4.0-BETA-HOMOLOGATION.md`.
+O roteiro está em `docs/releases/V0.4.0-BETA-HOMOLOGATION.md` e a execução humana está rastreada na issue #53.

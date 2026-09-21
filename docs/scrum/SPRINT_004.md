@@ -157,10 +157,15 @@ A autorização continua server-side e derivada das memberships internas.
 - [x] TASK-SEC-S4-01 autorização, least privilege e tenant isolation;
 - [x] TASK-DOC-S4-01 documentação pós-implementação e evidências;
 - [x] TASK-CR-S4-01 review independente/adversarial do incremento;
-- [ ] TASK-REL-S4-01 homologação manual da candidata `v0.4.0-beta`.
+- [ ] TASK-REL-S4-01 homologação manual da candidata `v0.4.0-beta` — issue #53.
 
 A única atividade restante é a homologação humana descrita em
-`docs/releases/V0.4.0-BETA-HOMOLOGATION.md`.
+`docs/releases/V0.4.0-BETA-HOMOLOGATION.md` e rastreada na issue #53.
+
+Commit candidato: `9c3a8de004f44ecf783c1417e9096b1511a104c8`.
+
+Gates pós-merge obrigatórios confirmados verdes: CI, Sprint 2 Functional Smoke,
+Sprint 4 Functional Smoke, Private Demo Compose e Cloudflare Private Full-Stack.
 
 ## Critérios de sucesso da Sprint
 
