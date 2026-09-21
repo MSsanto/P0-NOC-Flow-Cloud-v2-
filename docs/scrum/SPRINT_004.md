@@ -1,6 +1,6 @@
 # Sprint 004 — Dashboard & Passagem de Turno
 
-**Status:** Ready para implementação — condicionado ao merge deste pacote documental com gates verdes  
+**Status:** Concluída tecnicamente — aguardando homologação manual da candidata `v0.4.0-beta`  
 **Duração planejada:** 2 semanas  
 **Release alvo:** `v0.4.0-beta`  
 **Sprint Goal:** permitir continuidade operacional entre turnos com visão rápida dos incidentes e pendências.
@@ -148,9 +148,19 @@ A autorização continua server-side e derivada das memberships internas.
 
 ## Tasks de implementação
 
-Estas tasks permanecem bloqueadas até o readiness ser concluído:
+- [x] TASK-BE-S4-01 criar/finalizar handover;
+- [x] TASK-BE-S4-02 consultar handovers;
+- [x] TASK-FE-S4-01 dashboard;
+- [x] TASK-FE-S4-02 editor/preview;
+- [x] TASK-FE-S4-03 consulta e histórico;
+- [x] TASK-QA-S4-01 fluxo de passagem, regressão e smoke ponta a ponta;
+- [x] TASK-SEC-S4-01 autorização, least privilege e tenant isolation;
+- [x] TASK-DOC-S4-01 documentação pós-implementação e evidências;
+- [x] TASK-CR-S4-01 review independente/adversarial do incremento;
+- [ ] TASK-REL-S4-01 homologação manual da candidata `v0.4.0-beta`.
 
-TASK-BE-S4-01 criar/finalizar handover; TASK-BE-S4-02 consultar handovers; TASK-FE-S4-01 dashboard; TASK-FE-S4-02 editor/preview; TASK-FE-S4-03 consulta; TASK-QA-S4-01 fluxo de passagem; TASK-SEC-S4-01 autorização/tenant; TASK-DOC-S4-01 docs pós-implementação; TASK-CR-S4-01 review; TASK-REL-S4-01 homologação.
+A única atividade restante é a homologação humana descrita em
+`docs/releases/V0.4.0-BETA-HOMOLOGATION.md`.
 
 ## Critérios de sucesso da Sprint
 
