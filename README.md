@@ -2,7 +2,7 @@
 
 > Plataforma web de portfólio para o ciclo operacional de incidentes em NOC, construída com Angular, FastAPI, PostgreSQL, Docker e GitHub Actions.
 
-**Status:** 🟢 Sprint 3 — Auth, RBAC & Multi-Tenancy concluída tecnicamente  
+**Status:** 🟢 Sprint 3 concluída; private demo Cloudflare full-stack implementada e aguardando homologação live  
 **Release candidata:** `v0.3.0-beta`  
 **Autor:** Matheus Santo  
 **Repositório:** `MSsanto/P0-NOC-Flow-Cloud-v2-`
@@ -24,9 +24,10 @@ O produto já permite:
 - validar lint/type-check, testes, builds, audits e smoke full-stack no GitHub Actions;
 - autenticar a demo privada por Cloudflare Access ou OIDC genérico;
 - aplicar RBAC server-side com perfis Admin, Supervisor, Operator e Viewer;
-- resolver memberships internas e bloquear acesso cross-tenant.
+- resolver memberships internas e bloquear acesso cross-tenant;
+- executar uma private demo no Cloudflare Worker com Angular + API same-origin + D1, protegida por Cloudflare Access.
 
-A execução local mantém um provider sintético isolado para desenvolvimento. A demo privada já suporta identidade confiável por **Cloudflare Access** ou **OIDC genérico**, com autorização server-side, memberships internas e isolamento por tenant. Produção pública continua bloqueada até homologação da candidata `v0.3.0-beta`.
+A execução local mantém um provider sintético isolado para desenvolvimento. A arquitetura canônica continua **FastAPI + PostgreSQL**. Para o ambiente de portfólio privado no plano Free, existe um adapter específico **Cloudflare Worker + D1** que preserva o contrato `/api/v1` necessário ao Angular. O código e os gates de CI dessa demo full-stack estão validados; a homologação live do backend/D1 ainda precisa ser concluída no Worker autenticado. Produção pública continua bloqueada.
 
 ## Stack executável
 
@@ -41,7 +42,8 @@ A execução local mantém um provider sintético isolado para desenvolvimento. 
 | Web/Proxy | Nginx |
 | CI | GitHub Actions |
 | Segurança de dependências | `pip-audit` + `npm audit` |
-| Cloud alvo | Microsoft Azure |
+| Private demo | Cloudflare Worker + Static Assets + D1 + Access |
+| Cloud alvo de produção | Microsoft Azure (roadmap) |
 
 ## Executar com Docker
 
@@ -109,7 +111,7 @@ criar → atualizar → timeline → filtrar/paginar → normalizar
 → timeline → rejeitar dupla normalização → rejeitar update pós-resolução
 ```
 
-Os smokes atravessam **Nginx → FastAPI → PostgreSQL**.
+Os smokes canônicos atravessam **Nginx → FastAPI → PostgreSQL**. O gate `Cloudflare Private Full-Stack` valida separadamente Angular, contrato do Worker API e o bundle Wrangler do adapter D1.
 
 Comandos locais úteis:
 
@@ -187,28 +189,26 @@ A candidata beta inclui validação de tokens OIDC/JWT, integração com Cloudfl
 
 A timeline é append-only no fluxo suportado e as ações validam o estado do incidente. Recursos fora do tenant ativo não são expostos pela API suportada.
 
-A `v0.3.0-beta` é homologável como ambiente local e demo privada protegida. O provider demo é restrito a `development`/`test`; ambientes protegidos exigem identidade externa validada. Produção pública permanece bloqueada por design até a homologação e o hardening final.
+A `v0.3.0-beta` é homologável como ambiente local e demo privada protegida. O frontend privado em `workers.dev` já foi validado atrás do Cloudflare Access, inclusive com bloqueio em janela anônima. O adapter Worker + D1 está implementado e validado no CI, mas só será marcado como homologado após a jornada live de `/auth/me` e incidentes. Produção pública permanece bloqueada por design.
 
 ## Arquitetura resumida
 
 ```mermaid
 flowchart LR
-    U[Analista NOC] --> WEB[Angular / Nginx]
-    WEB -->|/api/v1| API[FastAPI]
+    U[Analista NOC] --> CF[Cloudflare Access]
+    CF --> W[Worker + Angular]
+    W -->|/api/v1 private demo| D1[(D1)]
+    WEB[Angular / Nginx local] -->|/api/v1 canônico| API[FastAPI]
     API --> DB[(PostgreSQL)]
-    API --> EVT[(Incident Events)]
-    CI[GitHub Actions] --> WEB
+    CI[GitHub Actions] --> W
     CI --> API
-    CI --> DB
-    AZ[Azure - roadmap] -.-> WEB
-    AZ -.-> API
-    AZ -.-> DB
+    AZ[Azure - roadmap produção] -.-> API
 ```
 
 ## Estrutura
 
 ```text
-apps/web/                   # Angular
+apps/web/                   # Angular + adapter Cloudflare Worker/D1
 backend/                    # FastAPI, domínio, SQLAlchemy, Alembic e testes
 compose.yaml                # stack local integrada
 .github/workflows/          # gates de CI
@@ -230,6 +230,8 @@ Destaques:
 - [Modelo de dados](docs/05-DATA-MODEL.md)
 - [Segurança](docs/08-SECURITY-PRIVACY.md)
 - [Estratégia de testes](docs/09-TEST-STRATEGY.md)
+- [Cloudflare Worker + D1 — private demo full-stack](docs/deployment/CLOUDFLARE-WORKER-FULLSTACK-D1.md)
+- [ADR-0009 — adapter Cloudflare Worker + D1](docs/adr/0009-cloudflare-worker-d1-private-demo.md)
 - [ADRs](docs/adr/)
 
 ## Roadmap

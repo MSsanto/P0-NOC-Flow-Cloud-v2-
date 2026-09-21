@@ -36,6 +36,11 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 - [Plano de implementação](16-IMPLEMENTATION-PLAN.md)
 - [Matriz de rastreabilidade](17-TRACEABILITY.md)
 
+## Deployment
+
+- [Cloudflare Worker + D1 — Private Demo Full-Stack](deployment/CLOUDFLARE-WORKER-FULLSTACK-D1.md)
+- [Cloudflare Private Demo — Tunnel/Compose](deployment/CLOUDFLARE-PRIVATE-DEMO.md)
+
 ## Integrações
 
 - [Monitoring & Notifications — Zabbix + WhatsApp](integrations/MONITORING-NOTIFICATIONS.md)
@@ -52,6 +57,7 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 - [ADR-0006 — Versionamento da API e erros](adr/0006-api-versioning-and-errors.md)
 - [ADR-0007 — IDs e migrations da Sprint 1](adr/0007-sprint1-ids-and-migrations.md)
 - [ADR-0008 — Handover como snapshot versionado](adr/0008-handover-snapshot-versioning.md)
+- [ADR-0009 — Adapter Cloudflare Worker + D1 para private demo](adr/0009-cloudflare-worker-d1-private-demo.md)
 
 ## API
 
