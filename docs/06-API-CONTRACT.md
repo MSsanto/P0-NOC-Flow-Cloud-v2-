@@ -235,6 +235,7 @@ Resposta alvo:
 Regras:
 
 - tenant é resolvido server-side;
+- janela atual é calculada com `timezone`, `shift_start_local` e `shift_duration_minutes` do tenant;
 - `active_count`: incidentes cujo status não é `RESOLVED` nem `CLOSED`;
 - `critical_active_count`: subconjunto ativo com severidade `CRITICAL`;
 - `resolved_in_shift_count`: incidentes com `INCIDENT_NORMALIZED` dentro da janela atual;
@@ -291,6 +292,21 @@ Regras:
 - ausência de `handover:finalize` retorna `403`;
 - campos extras que tentem forjar tenant, ator, versão ou itens retornam `422`.
 
+### Histórico de handovers
+
+`GET /handovers`
+
+Permissão: `handover:read`.
+
+Parâmetros:
+
+```text
+page       >= 1; padrão 1
+page_size  1..100; padrão 25
+```
+
+Resposta paginada em ordem de `finalized_at DESC`. Retorna metadados suficientes para navegar para versões anteriores sem recalcular snapshot.
+
 ### Handover mais recente
 
 `GET /handovers/latest`
@@ -308,7 +324,7 @@ Permissão: `handover:read`.
 
 - retorna snapshot persistido e seus itens;
 - recurso fora do tenant autorizado é tratado como não encontrado;
-- versões antigas permanecem consultáveis pelo próprio ID;
+- versões antigas permanecem consultáveis pelo próprio ID e descobertas por `GET /handovers`;
 - não existem endpoints `PATCH`, `PUT` ou `DELETE` para handover finalizado na Sprint 4.
 
 ### Shape alvo do handover
