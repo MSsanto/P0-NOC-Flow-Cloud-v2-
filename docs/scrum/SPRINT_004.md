@@ -1,6 +1,6 @@
 # Sprint 004 — Dashboard & Passagem de Turno
 
-**Status:** Concluída tecnicamente — aguardando homologação manual da candidata `v0.4.0-beta`  
+**Status:** Concluída e homologada — `v0.4.0-beta` APROVADA para demo privada  
 **Duração planejada:** 2 semanas  
 **Release alvo:** `v0.4.0-beta`  
 **Sprint Goal:** permitir continuidade operacional entre turnos com visão rápida dos incidentes e pendências.
@@ -157,10 +157,9 @@ A autorização continua server-side e derivada das memberships internas.
 - [x] TASK-SEC-S4-01 autorização, least privilege e tenant isolation;
 - [x] TASK-DOC-S4-01 documentação pós-implementação e evidências;
 - [x] TASK-CR-S4-01 review independente/adversarial do incremento;
-- [ ] TASK-REL-S4-01 homologação manual da candidata `v0.4.0-beta` — issue #53.
+- [x] TASK-REL-S4-01 homologação manual da candidata `v0.4.0-beta` — issue #53.
 
-A única atividade restante é a homologação humana descrita em
-`docs/releases/V0.4.0-BETA-HOMOLOGATION.md` e rastreada na issue #53.
+Homologação humana concluída em 21/09/2026 com status **APROVADA — DEMO PRIVADA**. Evidência em `docs/releases/V0.4.0-BETA-HOMOLOGATION.md` e issue #53.
 
 Commit candidato: `9c3a8de004f44ecf783c1417e9096b1511a104c8`.
 
