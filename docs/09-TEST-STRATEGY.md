@@ -225,3 +225,18 @@ No PR de implementação da Sprint 4 foram executados com sucesso:
 - Sprint 4 Functional Smoke ponta a ponta.
 
 O Sprint 4 Functional Smoke valida criação de incidente, dashboard, preview, finalização, histórico/latest, normalização posterior, imutabilidade do snapshot e rejeição de `tenant_id` forjado.
+
+
+## Matriz de testes da Sprint 5
+
+- request ID válido é propagado; inválido é substituído;
+- resposta e Problem Details usam o mesmo request ID;
+- log por request contém apenas metadata allowlisted;
+- log não contém Authorization, Cookie, body, sintomas ou observações;
+- live responde sem banco; ready retorna 503 quando banco obrigatório falha;
+- create/update/normalize de incidente geram audit event;
+- finalização de handover gera audit event;
+- rollback não deixa audit event órfão;
+- Admin/Supervisor consultam; Operator/Viewer recebem 403;
+- auditoria de outro tenant não aparece;
+- API não oferece update/delete de audit event.
