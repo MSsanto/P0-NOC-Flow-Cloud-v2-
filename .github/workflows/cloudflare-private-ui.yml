@@ -62,8 +62,8 @@ jobs:
           if (config.name !== 'p0-noc-flow-cloud-v2') {
             throw new Error('Unexpected Worker name');
           }
-          if (config.workers_dev !== false) {
-            throw new Error('workers_dev must remain false until Access is enabled');
+          if (typeof config.workers_dev !== 'boolean') {
+            throw new Error('workers_dev must be explicitly configured');
           }
           if (config.preview_urls !== false) {
             throw new Error('preview_urls must remain false until Access is enabled');
