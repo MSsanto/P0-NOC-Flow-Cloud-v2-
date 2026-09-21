@@ -22,20 +22,26 @@ const ROLE_PERMISSIONS = Object.freeze({
     "incident:create",
     "incident:update",
     "incident:normalize",
+    "handover:read",
+    "handover:finalize",
   ],
   Supervisor: [
     "incident:read",
     "incident:create",
     "incident:update",
     "incident:normalize",
+    "handover:read",
+    "handover:finalize",
   ],
   Operator: [
     "incident:read",
     "incident:create",
     "incident:update",
     "incident:normalize",
+    "handover:read",
+    "handover:finalize",
   ],
-  Viewer: ["incident:read"],
+  Viewer: ["incident:read", "handover:read"],
 });
 
 let schemaReadyPromise;
