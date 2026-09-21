@@ -22,20 +22,28 @@ const ROLE_PERMISSIONS = Object.freeze({
     "incident:create",
     "incident:update",
     "incident:normalize",
+    "handover:read",
+    "handover:finalize",
+    "audit:read",
   ],
   Supervisor: [
     "incident:read",
     "incident:create",
     "incident:update",
     "incident:normalize",
+    "handover:read",
+    "handover:finalize",
+    "audit:read",
   ],
   Operator: [
     "incident:read",
     "incident:create",
     "incident:update",
     "incident:normalize",
+    "handover:read",
+    "handover:finalize",
   ],
-  Viewer: ["incident:read"],
+  Viewer: ["incident:read", "handover:read"],
 });
 
 let schemaReadyPromise;
@@ -644,6 +652,57 @@ async function ensureSchema(env) {
         ),
         env.DB.prepare(
           "CREATE INDEX IF NOT EXISTS idx_events_tenant_incident ON incident_events(tenant_id, incident_id, occurred_at)",
+        ),
+        env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS handovers (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            window_start TEXT NOT NULL,
+            window_end TEXT NOT NULL,
+            version INTEGER NOT NULL,
+            observations TEXT,
+            finalized_by_subject TEXT NOT NULL,
+            finalized_at TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE (tenant_id, window_start, window_end, version),
+            FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+          )
+        `),
+        env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS handover_items (
+            id TEXT PRIMARY KEY,
+            handover_id TEXT NOT NULL,
+            incident_id TEXT NOT NULL,
+            title_snapshot TEXT NOT NULL,
+            affected_resource_snapshot TEXT NOT NULL,
+            severity_snapshot TEXT NOT NULL,
+            status_snapshot TEXT NOT NULL,
+            started_at_snapshot TEXT NOT NULL,
+            last_event_message_snapshot TEXT,
+            last_event_at_snapshot TEXT,
+            UNIQUE (handover_id, incident_id),
+            FOREIGN KEY (handover_id) REFERENCES handovers(id),
+            FOREIGN KEY (incident_id) REFERENCES incidents(id)
+          )
+        `),
+        env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS audit_events (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            actor_subject TEXT NOT NULL,
+            action TEXT NOT NULL,
+            resource_type TEXT NOT NULL,
+            resource_id TEXT,
+            request_id TEXT NOT NULL,
+            occurred_at TEXT NOT NULL,
+            FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+          )
+        `),
+        env.DB.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_handovers_tenant_finalized ON handovers(tenant_id, finalized_at DESC)",
+        ),
+        env.DB.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_audit_tenant_occurred ON audit_events(tenant_id, occurred_at DESC)",
         ),
       ])
       .then(async () => {
