@@ -91,3 +91,35 @@ Produção Azure: preferir Managed Identity + Key Vault quando aplicável.
 O portfólio não pretende processar dados pessoais reais. Em implantação real, antes de produção deverão ser definidos finalidade, base legal, minimização, retenção, direitos do titular, operadores/controladores e procedimento de incidente de segurança conforme o contexto jurídico da organização.
 
 Este documento é requisito de engenharia, não parecer jurídico.
+
+## Extensão RBAC planejada — Sprint 4
+
+A Sprint 4 adicionará permissions explícitas sem alterar a autoridade das roles externas:
+
+| Permissão | Admin | Supervisor | Operator | Viewer |
+|---|---:|---:|---:|---:|
+| `handover:read` | ✓ | ✓ | ✓ | ✓ |
+| `handover:finalize` | ✓ | ✓ | ✓ | — |
+
+Regras:
+
+- `GET /dashboard/summary` exige `incident:read`;
+- `GET /handovers/preview`, `GET /handovers/latest` e `GET /handovers/{id}` exigem `handover:read`;
+- `POST /handovers` exige `handover:finalize`;
+- tenant continua vindo do contexto autenticado;
+- handover de outro tenant é tratado como não encontrado para evitar enumeração;
+- cliente não envia tenant, autor, versão ou itens como autoridade;
+- observações são texto livre validado e nunca devem ser renderizadas como HTML não escapado;
+- logs não registram body completo de observações.
+
+### Ameaças específicas da Sprint 4
+
+- IDOR/BOLA em handover por UUID;
+- elevação de Viewer para finalização;
+- forging de tenant/autor/versão/itens;
+- corrida entre duas finalizações;
+- alteração retroativa de snapshot;
+- XSS em observações;
+- vazamento cross-tenant em agregados do dashboard.
+
+As mitigações obrigatórias são authorization server-side, tenant scoping, constraints transacionais, snapshot imutável, validação Pydantic, escaping no frontend e testes negativos dedicados.
