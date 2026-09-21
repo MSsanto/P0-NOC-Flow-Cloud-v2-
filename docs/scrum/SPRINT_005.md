@@ -1,53 +1,122 @@
 # Sprint 005 — Auditoria & Observabilidade
 
-**Status:** Planejamento futuro  
+**Status:** Ready para implementação  
 **Duração planejada:** 2 semanas  
 **Release alvo:** `v0.5.0-rc1`  
-**Sprint Goal:** tornar o sistema rastreável, observável e resiliente antes da publicação estável.
+**Sprint Goal:** tornar ações críticas rastreáveis e requests correlacionáveis sem registrar conteúdo sensível.
 
-## User Story
+## US-014 — Consultar trilha de auditoria [P1]
 
-### US-014 — Consultar trilha de auditoria [P1]
 Como administrador/supervisor, quero consultar ações relevantes para investigar alterações e reconstruir eventos operacionais.
 
 **Responsável primário:** 05 Backend & API
 
-**Aceite:** registrar ator, tenant, ação, entidade, ID e timestamp; acesso restrito; dados sensíveis não são expostos desnecessariamente.
+### Critérios de aceite
 
-## Enablers
+1. auditoria é append-only no fluxo HTTP suportado;
+2. cada evento contém tenant, ator, ação, tipo/id do recurso, timestamp e request ID;
+3. auditoria não armazena body, token, observações ou mensagem operacional livre;
+4. criação, atualização e normalização de incidente são auditadas na mesma transação da mudança;
+5. finalização de handover é auditada na mesma transação;
+6. leitura é tenant-scoped;
+7. Admin e Supervisor possuem `audit:read`; Operator e Viewer recebem 403;
+8. endpoint suporta paginação e filtros por ação/tipo de recurso;
+9. recursos de outro tenant não entram no resultado;
+10. não existem endpoints HTTP de update/delete da auditoria.
 
-- EN-S5-01 structured logging e correlation ID;
-- EN-S5-02 `/health/live` e `/health/ready`;
-- EN-S5-03 Application Insights/observabilidade equivalente;
-- EN-S5-04 resiliência e tratamento de indisponibilidade;
-- EN-S5-05 performance e revisão de índices;
-- EN-S5-06 rodada formal de AppSec.
+## EN-S5-01 — Observabilidade & Resiliência [P0]
 
-## Distribuição por especialistas
+### Critérios de aceite
 
-- **01 PO:** eventos de auditoria necessários e política de acesso.
-- **02 Architecture:** padrão de observabilidade/correlation e audit boundaries.
-- **03 UX/UI:** estados degradados e feedback de indisponibilidade.
-- **04 Frontend:** tratamento de falhas e visualização autorizada da auditoria quando prevista.
-- **05 Backend:** audit trail, logging e health endpoints.
-- **06 Database:** audit schema/índices/performance.
-- **07 QA:** resiliência, performance básica e regressão.
-- **08 DevOps:** logs, métricas, Application Insights e alertas básicos.
-- **09 Security:** OWASP Top 10/API, secrets, logs, dependencies e RBAC.
-- **10 Docs:** observabilidade, troubleshooting e security docs.
-- **11 Review:** review independente.
-- **12 Release:** homologação `v0.5.0-rc1`.
+1. todo request recebe ou propaga `X-Request-ID`;
+2. a resposta expõe o mesmo `X-Request-ID`;
+3. log estruturado por request contém timestamp, level, request_id, método, path, status e duração;
+4. logs não registram Authorization, Cookie, query sensível ou body;
+5. exceção inesperada gera log correlacionável sem stack trace enviado ao cliente;
+6. `/health/live` não depende de banco;
+7. `/health/ready` retorna 503 quando PostgreSQL obrigatório está indisponível;
+8. implementação permanece provider-neutral e compatível com OpenTelemetry/Application Insights;
+9. CI valida correlação, redaction e health;
+10. Application Insights real fica para Sprint 6/Azure, evitando acoplamento prematuro.
 
-## Tasks principais
+## Modelo de dados
 
-TASK-ARC-S5-01 padrão de observabilidade; TASK-BE-S5-01 audit trail; TASK-BE-S5-02 correlation ID; TASK-BE-S5-03 health live/ready; TASK-DB-S5-01 audit/index review; TASK-FE-S5-01 degraded/error states; TASK-DO-S5-01 Application Insights; TASK-QA-S5-01 failure scenarios; TASK-QA-S5-02 performance; TASK-SEC-S5-01 AppSec formal; TASK-DOC-S5-01 runbook/troubleshooting; TASK-CR-S5-01 review; TASK-REL-S5-01 homologação.
+Nova tabela `audit_events`:
 
-## Critérios de sucesso
+| Campo | Regra |
+|---|---|
+| id | UUID PK |
+| tenant_id | UUID NOT NULL, FK tenants |
+| actor_subject | varchar(255) NOT NULL |
+| action | varchar(64) NOT NULL |
+| resource_type | varchar(64) NOT NULL |
+| resource_id | UUID nullable |
+| request_id | varchar(128) NOT NULL |
+| occurred_at | timestamptz NOT NULL |
 
-- ações críticas rastreáveis;
-- logs estruturados sem secrets/tokens;
-- requests correlacionáveis;
-- readiness/liveness funcionais;
-- falhas de dependências tratadas;
-- rodada AppSec sem Critical/High aberto sem mitigação;
-- release candidate homologada.
+Índices:
+
+- tenant + occurred_at desc;
+- tenant + action + occurred_at desc;
+- tenant + resource_type + resource_id.
+
+Retenção da RC: sem purge automático. Política de retenção de produção deve ser definida antes da v1.0.
+
+## RBAC
+
+- `audit:read`: Admin, Supervisor.
+- Operator e Viewer não consultam trilha de auditoria.
+
+## Segurança
+
+Nunca persistir/logar:
+
+- Authorization/JWT;
+- Cookie;
+- request/response body;
+- sintomas;
+- mensagem de update;
+- nota de normalização;
+- observações do handover;
+- connection string/secrets.
+
+## Gates
+
+- Ruff;
+- Alembic + PostgreSQL real;
+- pytest;
+- OpenAPI;
+- RBAC/cross-tenant;
+- atomicidade da auditoria;
+- request ID propagation/sanitization;
+- redaction de logging;
+- health live/ready;
+- regressão Sprint 2 e Sprint 4;
+- dependency audits;
+- review independente.
+
+## Tasks
+
+- [x] TASK-ARC-S5-01 padrão de auditoria/observabilidade;
+- [x] TASK-DB-S5-00 schema/índices planejados;
+- [x] TASK-SEC-S5-00 permissions e dados proibidos definidos;
+- [x] TASK-QA-S5-00 matriz de cenários definida;
+- [ ] TASK-BE-S5-01 audit trail;
+- [ ] TASK-BE-S5-02 correlation/logging estruturado;
+- [ ] TASK-BE-S5-03 health/resiliência;
+- [ ] TASK-DB-S5-01 migration audit/index review;
+- [ ] TASK-FE-S5-01 visualização autorizada da auditoria;
+- [ ] TASK-QA-S5-01 failure scenarios/regressão;
+- [ ] TASK-SEC-S5-01 AppSec formal;
+- [ ] TASK-DOC-S5-01 runbook/troubleshooting;
+- [ ] TASK-CR-S5-01 review independente;
+- [ ] TASK-REL-S5-01 homologação.
+
+## Fora do escopo
+
+- Azure Application Insights real;
+- Grafana/Prometheus;
+- tracing distribuído externo;
+- alertas/SLOs de produção;
+- exportação de auditoria;
+- purge job.
