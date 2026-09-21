@@ -92,9 +92,9 @@ O portfólio não pretende processar dados pessoais reais. Em implantação real
 
 Este documento é requisito de engenharia, não parecer jurídico.
 
-## Extensão RBAC planejada — Sprint 4
+## Extensão RBAC implementada — Sprint 4
 
-A Sprint 4 adicionará permissions explícitas sem alterar a autoridade das roles externas:
+A Sprint 4 adicionou permissions explícitas sem alterar a autoridade das roles externas:
 
 | Permissão | Admin | Supervisor | Operator | Viewer |
 |---|---:|---:|---:|---:|

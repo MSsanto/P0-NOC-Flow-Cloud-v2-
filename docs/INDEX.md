@@ -17,6 +17,7 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 - [Sprint 2 — resumo e evidências](sprints/SPRINT_02.md)
 - [Sprint 003 — contrato detalhado e fechamento técnico](scrum/SPRINT_003.md)
 - [Sprint 3 — resumo e evidências](sprints/SPRINT_03.md)
+- [Sprint 4 — resumo e evidências](sprints/SPRINT_04.md)
 - [Sprint 004 — readiness, Dashboard & Passagem de Turno](scrum/SPRINT_004.md)
 - [Retrospectives](scrum/RETROSPECTIVES.md)
 
@@ -24,6 +25,7 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 
 - [Roteiro de homologação — v0.1.0-alpha](releases/V0.1.0-ALPHA-HOMOLOGATION.md)
 - [Roteiro de homologação — v0.2.0-alpha](releases/V0.2.0-ALPHA-HOMOLOGATION.md)
+- [Roteiro de homologação manual — v0.4.0-beta](releases/V0.4.0-BETA-HOMOLOGATION.md)
 
 ## Arquitetura
 
@@ -77,6 +79,7 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 - [Estratégia de testes](09-TEST-STRATEGY.md)
 - [Riscos](15-RISKS.md)
 - [Sprint 004 — Readiness Review](reviews/SPRINT_004_READINESS_REVIEW.md)
+- [Sprint 004 — Implementation Review](reviews/SPRINT_004_IMPLEMENTATION_REVIEW.md)
 - [Glossário](GLOSSARY.md)
 
 ## Governança do repositório

@@ -14,3 +14,15 @@ def test_openapi_is_exposed_under_v1() -> None:
     assert "/api/v1/health/live" in body["paths"]
     assert "/api/v1/health/ready" in body["paths"]
     assert "503" in body["paths"]["/api/v1/health/ready"]["get"]["responses"]
+
+
+def test_sprint4_paths_are_exposed_under_v1() -> None:
+    body = client.get("/api/v1/openapi.json").json()
+    for path in (
+        "/api/v1/dashboard/summary",
+        "/api/v1/handovers/preview",
+        "/api/v1/handovers",
+        "/api/v1/handovers/latest",
+        "/api/v1/handovers/{handover_id}",
+    ):
+        assert path in body["paths"]

@@ -30,7 +30,15 @@ Este projeto segue a estrutura do Keep a Changelog para registrar incrementos re
 - memberships internas e isolamento cross-tenant;
 - endpoint autenticado `GET /api/v1/auth/me`;
 - terceira migration Alembic para usuários e memberships;
-- testes unitários e de integração de autenticação, permissões e isolamento por tenant.
+- testes unitários e de integração de autenticação, permissões e isolamento por tenant;
+- US-011 — dashboard operacional tenant-scoped;
+- US-012 — preview e finalização de passagem de turno;
+- US-013 — latest, histórico paginado e consulta de versões de handover;
+- ADR-0008 para snapshot versionado e imutável;
+- migration `20260921_0004_shift_handovers.py` com configuração de turno, handovers e itens;
+- permissions `handover:read` e `handover:finalize`;
+- Sprint 4 Functional Smoke atravessando Nginx → FastAPI → PostgreSQL;
+- testes de cálculo de turno, metadata, OpenAPI e fluxo integrado de handover;
 - roteiros reproduzíveis de homologação das candidatas `v0.1.0-alpha` e `v0.2.0-alpha`.
 
 ### Fixed
@@ -54,8 +62,12 @@ Este projeto segue a estrutura do Keep a Changelog para registrar incrementos re
 - containers e proxy recebem baseline de hardening;
 - `pip-audit` e `npm audit` fazem parte do pipeline;
 - payloads com campos de autoridade forjados são rejeitados nos fluxos cobertos;
-- tokens OIDC inválidos, memberships ausentes e tentativas cross-tenant retornam 401/403 sem confiar em autorização do frontend.
+- tokens OIDC inválidos, memberships ausentes e tentativas cross-tenant retornam 401/403 sem confiar em autorização do frontend;
+- handover finalizado é append-only por versão e não possui update/delete HTTP;
+- cliente não controla tenant, ator, versão ou itens do snapshot;
+- tentativa de tenant forjado no handover retorna 422;
+- Viewer pode consultar handover, mas não finalizar.
 
 ### Note
 
-A candidata atual é `v0.3.0-beta`, destinada a ambiente local e demo privada protegida por Cloudflare Access/OIDC. OIDC, RBAC e isolamento multi-tenant estão implementados e validados no CI; nenhum deploy público/produção está autorizado. Não há tag/GitHub Release publicada neste estágio.
+A candidata atual é `v0.4.0-beta`, destinada a ambiente local e demo privada protegida por Cloudflare Access/OIDC. OIDC, RBAC e isolamento multi-tenant estão implementados e validados no CI; nenhum deploy público/produção está autorizado. Não há tag/GitHub Release publicada neste estágio.

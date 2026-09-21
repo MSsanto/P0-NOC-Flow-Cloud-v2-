@@ -1,0 +1,145 @@
+name: Sprint 4 Functional Smoke
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sprint4-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and start stack
+        run: docker compose up -d --build
+
+      - name: Validate Sprint 4 dashboard and handover flow
+        run: |
+          python - <<'PY'
+          from datetime import UTC, datetime, timedelta
+          import json
+          import time
+          import urllib.error
+          import urllib.request
+
+          def wait_ok(url: str) -> None:
+              for _ in range(60):
+                  try:
+                      with urllib.request.urlopen(url, timeout=2) as response:
+                          if response.status == 200:
+                              return
+                  except (urllib.error.URLError, ConnectionError):
+                      time.sleep(1)
+              raise SystemExit(f"Smoke failed for {url}")
+
+          def request_json(url: str, *, method: str = "GET", payload=None):
+              data = None if payload is None else json.dumps(payload).encode()
+              request = urllib.request.Request(
+                  url,
+                  data=data,
+                  method=method,
+                  headers={"Content-Type": "application/json"},
+              )
+              with urllib.request.urlopen(request, timeout=5) as response:
+                  raw = response.read().decode()
+                  return response.status, json.loads(raw) if raw else None
+
+          wait_ok("http://127.0.0.1:8000/api/v1/health/ready")
+          wait_ok("http://127.0.0.1:4200/")
+
+          api = "http://127.0.0.1:4200/api/v1"
+          status, created = request_json(
+              f"{api}/incidents",
+              method="POST",
+              payload={
+                  "title": "Sprint 4 smoke incident",
+                  "affected_resource": "DEMO-S4-EDGE-01",
+                  "severity": "CRITICAL",
+                  "impact_type": "OUTAGE",
+                  "symptoms": "Synthetic incident for Sprint 4 full-stack validation.",
+                  "started_at": (datetime.now(UTC) - timedelta(minutes=5)).isoformat(),
+              },
+          )
+          assert status == 201
+          incident_id = created["id"]
+
+          status, dashboard = request_json(f"{api}/dashboard/summary")
+          assert status == 200
+          assert dashboard["active_count"] >= 1
+          assert any(item["id"] == incident_id for item in dashboard["items"])
+
+          status, preview = request_json(f"{api}/handovers/preview")
+          assert status == 200
+          assert any(item["incident_id"] == incident_id for item in preview["items"])
+
+          status, handover = request_json(
+              f"{api}/handovers",
+              method="POST",
+              payload={"observations": "Sprint 4 smoke handover."},
+          )
+          assert status == 201
+          assert handover["version"] >= 1
+          assert any(item["incident_id"] == incident_id for item in handover["items"])
+          handover_id = handover["id"]
+          snapshot_status = next(
+              item["status"] for item in handover["items"] if item["incident_id"] == incident_id
+          )
+
+          status, history = request_json(f"{api}/handovers")
+          assert status == 200
+          assert any(item["id"] == handover_id for item in history["items"])
+
+          status, latest = request_json(f"{api}/handovers/latest")
+          assert status == 200 and latest["id"] == handover_id
+
+          status, normalized = request_json(
+              f"{api}/incidents/{incident_id}/normalize",
+              method="POST",
+              payload={"note": "Normalized after snapshot."},
+          )
+          assert status == 200 and normalized["status"] == "RESOLVED"
+
+          status, historical = request_json(f"{api}/handovers/{handover_id}")
+          assert status == 200
+          historical_status = next(
+              item["status"]
+              for item in historical["items"]
+              if item["incident_id"] == incident_id
+          )
+          assert historical_status == snapshot_status == "OPEN"
+
+          status, dashboard_after = request_json(f"{api}/dashboard/summary")
+          assert status == 200
+          assert all(item["id"] != incident_id for item in dashboard_after["items"])
+          assert dashboard_after["resolved_in_shift_count"] >= 1
+
+          try:
+              request_json(
+                  f"{api}/handovers",
+                  method="POST",
+                  payload={
+                      "observations": "Forged authority attempt.",
+                      "tenant_id": "00000000-0000-4000-8000-000000000999",
+                  },
+              )
+          except urllib.error.HTTPError as error:
+              assert error.code == 422
+          else:
+              raise AssertionError("Forged tenant authority should be rejected")
+
+          print("Sprint 4 functional smoke OK", handover_id)
+          PY
+
+      - name: Show container status on failure
+        if: failure()
+        run: docker compose ps && docker compose logs --no-color
+
+      - name: Stop stack
+        if: always()
+        run: docker compose down -v

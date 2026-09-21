@@ -10,7 +10,9 @@ export type AppPermission =
   | 'incident:read'
   | 'incident:create'
   | 'incident:update'
-  | 'incident:normalize';
+  | 'incident:normalize'
+  | 'handover:read'
+  | 'handover:finalize';
 
 export interface AuthContext {
   readonly subject: string;

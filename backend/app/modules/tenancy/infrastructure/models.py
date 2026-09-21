@@ -1,7 +1,18 @@
-from datetime import datetime
+from datetime import datetime, time
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, String, Uuid, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Time,
+    Uuid,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -19,6 +30,11 @@ class TenantModel(Base):
             name="ck_tenants_name_length",
         ),
         CheckConstraint("updated_at >= created_at", name="ck_tenants_updated_at"),
+        CheckConstraint(
+            "shift_duration_minutes BETWEEN 60 AND 1440 "
+            "AND MOD(1440, shift_duration_minutes) = 0",
+            name="ck_tenants_shift_duration",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -33,6 +49,16 @@ class TenantModel(Base):
         nullable=False,
         default="UTC",
         server_default="UTC",
+    )
+    shift_start_local: Mapped[time] = mapped_column(
+        Time,
+        nullable=False,
+        default=lambda: time(6, 0),
+    )
+    shift_duration_minutes: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=720,
     )
     is_active: Mapped[bool] = mapped_column(
         Boolean,

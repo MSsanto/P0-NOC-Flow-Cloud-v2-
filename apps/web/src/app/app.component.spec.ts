@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { AppComponent } from './app.component';
-import { AuthContext, AuthContextService } from './core/auth/auth-context.service';
+import { AppPermission, AuthContext, AuthContextService } from './core/auth/auth-context.service';
 
 class AuthContextStub {
   readonly context = signal<AuthContext | null>({
@@ -15,12 +15,18 @@ class AuthContextStub {
       'incident:create',
       'incident:update',
       'incident:normalize',
+      'handover:read',
+      'handover:finalize',
     ],
   });
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
   load(): void {}
+
+  can(permission: AppPermission): boolean {
+    return this.context()?.permissions.includes(permission) ?? false;
+  }
 }
 
 describe('AppComponent', () => {
