@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "NOC Flow Cloud API"
-    app_version: str = "0.2.0-alpha"
+    app_version: str = "0.4.0-beta"
     environment: Literal["development", "test", "staging", "production"] = "development"
     database_url: str = "postgresql+psycopg://nocflow:nocflow@localhost:5432/nocflow"
     log_level: str = "INFO"
