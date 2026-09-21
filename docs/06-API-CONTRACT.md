@@ -287,6 +287,7 @@ Regras:
 - tenant, ator, janela, versão, timestamps e itens são definidos pelo servidor;
 - a API recalcula o snapshot no instante da finalização; não aceita lista de incidentes enviada pelo cliente;
 - cria handover + itens em uma transação;
+- preview vazio pode ser finalizado e gera handover válido com zero itens; isso registra explicitamente um turno sem incidentes selecionados;
 - sucesso retorna `201`;
 - colisão de versão concorrente retorna `409` com código estável `HANDOVER_VERSION_CONFLICT`;
 - ausência de `handover:finalize` retorna `403`;
@@ -305,7 +306,27 @@ page       >= 1; padrão 1
 page_size  1..100; padrão 25
 ```
 
-Resposta paginada em ordem de `finalized_at DESC`. Retorna metadados suficientes para navegar para versões anteriores sem recalcular snapshot.
+Resposta alvo:
+
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "version": 2,
+      "window_start": "2026-09-21T06:00:00Z",
+      "window_end": "2026-09-21T18:00:00Z",
+      "finalized_by_subject": "operator-subject",
+      "finalized_at": "2026-09-21T17:10:00Z"
+    }
+  ],
+  "page": 1,
+  "page_size": 25,
+  "total": 1
+}
+```
+
+Ordenação: `finalized_at DESC`. O histórico retorna metadados suficientes para navegar para versões anteriores sem recalcular snapshot.
 
 ### Handover mais recente
 
