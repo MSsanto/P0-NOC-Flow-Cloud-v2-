@@ -1,10 +1,18 @@
 {
   "name": "p0-noc-flow-cloud-v2",
+  "main": "./cloudflare/worker.mjs",
   "compatibility_date": "2026-09-21",
   "workers_dev": true,
   "preview_urls": false,
   "assets": {
     "directory": "./dist/noc-flow-cloud-web/browser",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
     "not_found_handling": "single-page-application"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB"
+    }
+  ]
 }

@@ -4,9 +4,10 @@ Documentação de execução e ambientes do P0 — NOC Flow Cloud v2.
 
 ## Private demo
 
-- [Cloudflare Private Demo](CLOUDFLARE-PRIVATE-DEMO.md) — Docker Compose sem portas públicas, Cloudflare Tunnel e Cloudflare Access deny-by-default.
-- [Cloudflare Worker — Private UI Preview](CLOUDFLARE-WORKER-PRIVATE-UI.md) — frontend Angular em Workers Static Assets, sem URL até o Access estar ativo.
+- [Cloudflare Worker + D1 — Private Demo Full-Stack](CLOUDFLARE-WORKER-FULLSTACK-D1.md) — ambiente privado no plano Free, Angular + API adapter + D1, protegido por Cloudflare Access.
+- [Cloudflare Private Demo](CLOUDFLARE-PRIVATE-DEMO.md) — alternativa canônica com Docker Compose, FastAPI, PostgreSQL, Tunnel e Access.
+- [Cloudflare Worker — Private UI Preview](CLOUDFLARE-WORKER-PRIVATE-UI.md) — etapa histórica de frontend-only que antecedeu o adapter D1.
 
 ## Produção
 
-Produção pública ainda não está autorizada. O roadmap exige identidade confiável (OIDC), RBAC, hardening, observabilidade, estratégia de backup/restore e homologação do ambiente antes de exposição produtiva.
+Produção pública ainda não está autorizada. O roadmap exige identidade confiável, RBAC, hardening, observabilidade, estratégia de backup/restore e homologação formal do ambiente antes de exposição produtiva.

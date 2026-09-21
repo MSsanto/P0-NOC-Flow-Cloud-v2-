@@ -1,78 +1,26 @@
 # Cloudflare Worker — Private UI Preview
 
-## Objetivo
+> **Status:** superseded como ambiente ativo pelo
+> [Cloudflare Worker + D1 — Private Demo Full-Stack](CLOUDFLARE-WORKER-FULLSTACK-D1.md).
+> Este documento preserva o histórico da etapa frontend-only.
+
+## Objetivo original
 
 Publicar o frontend Angular do **P0 — NOC Flow Cloud v2** no Worker existente
 `p0-noc-flow-cloud-v2` sem expor uma URL antes de o Cloudflare Access estar ativo.
 
-Este fluxo é um **preview privado da interface**. Ele não substitui o private demo
-full-stack baseado em Tunnel + FastAPI + PostgreSQL.
+A etapa foi homologada em 2026-09-21:
 
-## Estado seguro inicial
+- Workers Build verde;
+- URL `workers.dev` habilitada somente depois de Access em `All traffic`;
+- Angular carregado;
+- janela anônima bloqueada.
 
-O arquivo `apps/web/wrangler.jsonc` mantém:
+## Evolução
 
-```json
-{
-  "workers_dev": false,
-  "preview_urls": false
-}
-```
+O preview frontend-only exibia falha em `/api/v1` porque ainda não havia backend
+no Worker. O ADR-0009 adiciona um adapter Worker + D1 que preserva o contrato
+HTTP necessário para o private demo ser funcional.
 
-Isso permite validar build/deploy do Worker sem criar uma URL pública.
-
-## Configuração do Workers Builds
-
-No Worker existente, em **Settings > Build**, usar:
-
-- Root directory: `apps/web`
-- Build command: `npm install --global npm@11 && npm ci && npm run build`
-- Deploy command: `npx wrangler deploy`
-
-O runtime do build é fixado por `apps/web/.node-version`.
-
-## Ordem de ativação privada
-
-1. Fazer um build com `workers_dev=false` e confirmar sucesso.
-2. Abrir a aba **Access** do Worker.
-3. Selecionar **Protect this Worker behind Access**.
-4. Proteger **All traffic**.
-5. Restringir a política à identidade autorizada.
-6. Somente depois habilitar a URL `workers.dev`.
-7. Atualizar `workers_dev` para `true` no repositório e redeployar.
-8. Confirmar em janela anônima que o login do Access aparece antes da aplicação.
-
-Nunca habilitar `workers.dev` antes da política Access.
-
-## SPA
-
-O Angular gera os assets em:
-
-```text
-dist/noc-flow-cloud-web/browser
-```
-
-O Worker usa `not_found_handling = single-page-application`, portanto rotas
-client-side do Angular retornam `index.html` em navegações que não correspondem
-a um arquivo estático.
-
-## Limitação atual
-
-O frontend de produção usa `/api/v1`. Nesta etapa a Cloudflare hospeda apenas os
-assets Angular; portanto chamadas à API não estarão funcionais até conectar o
-backend FastAPI/PostgreSQL ao front door privado.
-
-A versão full-stack continua documentada em
-`docs/deployment/CLOUDFLARE-PRIVATE-DEMO.md`.
-
-## Gate
-
-- Angular type-check: PASS;
-- testes unitários: PASS;
-- build de produção: PASS;
-- `index.html` presente no diretório de assets;
-- configuração Wrangler com SPA fallback;
-- `workers_dev=false`;
-- `preview_urls=false`;
-- `wrangler deploy --dry-run`: PASS;
-- Access ativo antes de qualquer URL.
+O stack canônico FastAPI/PostgreSQL continua preservado e não é substituído pela
+decisão de demo.
