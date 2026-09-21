@@ -1,15 +1,33 @@
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.db.session import get_session_factory
 from app.main import app
 from app.modules.audit.infrastructure.models import AuditEventModel
+from app.modules.incidents.infrastructure.models import IncidentEventModel, IncidentModel
 from app.modules.tenancy.application.context import RequestContext
 from app.modules.tenancy.application.security import Role
 from app.modules.tenancy.presentation.dependencies import get_request_context
+
+
+@pytest.fixture(autouse=True)
+def clean_sprint5_business_data():
+    factory = get_session_factory()
+    with factory() as session:
+        session.execute(delete(AuditEventModel))
+        session.execute(delete(IncidentEventModel))
+        session.execute(delete(IncidentModel))
+        session.commit()
+    yield
+    with factory() as session:
+        session.execute(delete(AuditEventModel))
+        session.execute(delete(IncidentEventModel))
+        session.execute(delete(IncidentModel))
+        session.commit()
 
 
 def _payload() -> dict[str, object]:
