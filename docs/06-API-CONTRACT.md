@@ -2,7 +2,7 @@
 
 Base: `/api/v1`
 
-O OpenAPI gerado pelo FastAPI é a fonte executável do contrato implementado. Este documento registra as convenções estáveis e o estado funcional alcançado até a Sprint 3.
+O OpenAPI gerado pelo FastAPI é a fonte executável do contrato implementado. Este documento registra as convenções estáveis e o estado funcional alcançado até a Sprint 4.
 
 ## Convenções
 
@@ -207,9 +207,9 @@ A candidata `v0.3.0-beta` permanece destinada a ambiente local e demo privada pr
 Exemplos adicionais e parâmetros da Sprint 2: [`api/SPRINT_02-INCIDENTS.md`](api/SPRINT_02-INCIDENTS.md).
 
 
-## Contratos planejados da Sprint 4 — ainda não implementados
+## Dashboard e handover — implementados na Sprint 4
 
-Os endpoints abaixo são contrato de readiness. Eles não devem ser anunciados como implementados até o merge do incremento correspondente e atualização desta seção.
+Os endpoints abaixo integram o contrato executável da candidata `v0.4.0-beta`.
 
 ### Dashboard operacional
 
