@@ -104,6 +104,16 @@ Cobertura é indicador, não substituto de qualidade.
 
 ## Matriz de testes da Sprint 4
 
+### Cálculo de turno
+
+- tenant em timezone sem DST;
+- instante exatamente no início do turno;
+- instante imediatamente antes/depois do limite;
+- turno atravessando meia-noite;
+- timezone com transição DST usando IANA;
+- `shift_duration_minutes` inválido rejeitado por constraint/configuração;
+- limites persistidos no handover correspondem ao value object calculado.
+
 ### Dashboard — US-011
 
 **Unit/integration**
@@ -156,6 +166,7 @@ Cobertura é indicador, não substituto de qualidade.
 
 - latest retorna a finalização mais recente do tenant;
 - latest sem registro retorna 404 `HANDOVER_NOT_FOUND`;
+- histórico paginado ordena por finalização desc;
 - consulta por ID retorna versão histórica;
 - ID de outro tenant não é exposto;
 - Viewer pode consultar;
