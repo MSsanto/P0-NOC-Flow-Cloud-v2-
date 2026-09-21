@@ -17,6 +17,7 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 - [Sprint 2 — resumo e evidências](sprints/SPRINT_02.md)
 - [Sprint 003 — contrato detalhado e fechamento técnico](scrum/SPRINT_003.md)
 - [Sprint 3 — resumo e evidências](sprints/SPRINT_03.md)
+- [Sprint 004 — readiness, Dashboard & Passagem de Turno](scrum/SPRINT_004.md)
 - [Retrospectives](scrum/RETROSPECTIVES.md)
 
 ## Release e homologação
@@ -50,6 +51,7 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 - [ADR-0005 — Política de dados públicos](adr/0005-public-data-policy.md)
 - [ADR-0006 — Versionamento da API e erros](adr/0006-api-versioning-and-errors.md)
 - [ADR-0007 — IDs e migrations da Sprint 1](adr/0007-sprint1-ids-and-migrations.md)
+- [ADR-0008 — Handover como snapshot versionado](adr/0008-handover-snapshot-versioning.md)
 
 ## API
 
