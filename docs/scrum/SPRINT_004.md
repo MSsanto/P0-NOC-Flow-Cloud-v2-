@@ -62,7 +62,7 @@ Como operador que encerra o turno, quero registrar uma passagem estruturada para
 7. duas finalizações concorrentes não podem produzir a mesma versão;
 8. Viewer recebe 403 ao tentar finalizar;
 9. tentativa cross-tenant não revela existência do recurso;
-10. falha transacional não pode persistir handover parcial sem itens obrigatórios.
+10. falha transacional durante persistência não pode deixar pai/itens parcialmente gravados; preview vazio pode ser finalizado legitimamente com zero itens.
 
 ### US-013 — Consultar passagem de turno [P0]
 
@@ -91,10 +91,8 @@ O snapshot da Sprint 4 deve possuir informação suficiente para continuidade se
 - severidade;
 - status no snapshot;
 - instante de início;
-- resumo/situação disponível;
-- próximo passo quando suportado pelo modelo atual;
-- protocolos quando suportados pelo modelo atual;
-- observações do handover;
+- última atualização disponível, quando existir;
+- observações gerais do handover;
 - autoria;
 - timestamps;
 - janela do turno;
