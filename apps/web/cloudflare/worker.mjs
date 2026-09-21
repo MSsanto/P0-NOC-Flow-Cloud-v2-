@@ -1258,6 +1258,347 @@ async function listTimeline(env, context, incidentId) {
   return (result.results ?? []).map(mapEvent);
 }
 
+
+async function getShiftWindow(env, tenantId, now = new Date()) {
+  const tenant = await env.DB.prepare(`
+    SELECT timezone, shift_start_local, shift_duration_minutes, is_active
+    FROM tenants
+    WHERE id = ?
+  `)
+    .bind(tenantId)
+    .first();
+  if (!tenant || Number(tenant.is_active) !== 1) {
+    throw problem(
+      503,
+      "Shift configuration unavailable",
+      "Active tenant configuration was not found.",
+      "SHIFT_CONFIGURATION_INVALID",
+      "shift-configuration-invalid",
+    );
+  }
+  return calculateShiftWindow({
+    timezone: tenant.timezone,
+    shift_start_local: tenant.shift_start_local,
+    shift_duration_minutes: Number(tenant.shift_duration_minutes),
+    now,
+  });
+}
+
+function mapDashboardItem(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    affected_resource: row.affected_resource,
+    severity: row.severity,
+    status: row.status,
+    started_at: row.started_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function mapHandoverItem(row) {
+  return {
+    incident_id: row.incident_id ?? row.id,
+    title: row.title ?? row.title_snapshot,
+    affected_resource: row.affected_resource ?? row.affected_resource_snapshot,
+    severity: row.severity ?? row.severity_snapshot,
+    status: row.status ?? row.status_snapshot,
+    started_at: row.started_at ?? row.started_at_snapshot,
+    last_event_message:
+      row.last_event_message ?? row.last_event_message_snapshot ?? null,
+    last_event_at: row.last_event_at ?? row.last_event_at_snapshot ?? null,
+  };
+}
+
+async function listDashboardItems(env, tenantId) {
+  const result = await env.DB.prepare(`
+    SELECT id, title, affected_resource, severity, status, started_at, updated_at
+    FROM incidents
+    WHERE tenant_id = ? AND status NOT IN ('RESOLVED', 'CLOSED')
+    ORDER BY
+      CASE severity
+        WHEN 'CRITICAL' THEN 0
+        WHEN 'HIGH' THEN 1
+        WHEN 'MEDIUM' THEN 2
+        ELSE 3
+      END ASC,
+      started_at ASC
+  `)
+    .bind(tenantId)
+    .all();
+  return (result.results ?? []).map(mapDashboardItem);
+}
+
+async function countResolvedInWindow(env, tenantId, window) {
+  const row = await env.DB.prepare(`
+    SELECT COUNT(DISTINCT incident_id) AS total
+    FROM incident_events
+    WHERE tenant_id = ?
+      AND event_type = 'INCIDENT_NORMALIZED'
+      AND occurred_at >= ?
+      AND occurred_at < ?
+  `)
+    .bind(tenantId, window.window_start, window.window_end)
+    .first();
+  return Number(row?.total ?? 0);
+}
+
+async function dashboardSummary(env, context) {
+  requirePermission(context, "incident:read");
+  const window = await getShiftWindow(env, context.tenant_id);
+  const items = await listDashboardItems(env, context.tenant_id);
+  return {
+    active_count: items.length,
+    critical_active_count: items.filter((item) => item.severity === "CRITICAL")
+      .length,
+    resolved_in_shift_count: await countResolvedInWindow(
+      env,
+      context.tenant_id,
+      window,
+    ),
+    shift: window,
+    items,
+  };
+}
+
+async function listHandoverSnapshotItems(env, tenantId, window) {
+  const result = await env.DB.prepare(`
+    SELECT
+      i.id AS incident_id,
+      i.title,
+      i.affected_resource,
+      i.severity,
+      i.status,
+      i.started_at,
+      (
+        SELECT e.message
+        FROM incident_events e
+        WHERE e.tenant_id = i.tenant_id AND e.incident_id = i.id
+        ORDER BY e.occurred_at DESC, e.id DESC
+        LIMIT 1
+      ) AS last_event_message,
+      (
+        SELECT e.occurred_at
+        FROM incident_events e
+        WHERE e.tenant_id = i.tenant_id AND e.incident_id = i.id
+        ORDER BY e.occurred_at DESC, e.id DESC
+        LIMIT 1
+      ) AS last_event_at
+    FROM incidents i
+    WHERE i.tenant_id = ?
+      AND (
+        i.status NOT IN ('RESOLVED', 'CLOSED')
+        OR i.id IN (
+          SELECT DISTINCT incident_id
+          FROM incident_events
+          WHERE tenant_id = ?
+            AND event_type = 'INCIDENT_NORMALIZED'
+            AND occurred_at >= ?
+            AND occurred_at < ?
+        )
+      )
+    ORDER BY
+      CASE i.severity
+        WHEN 'CRITICAL' THEN 0
+        WHEN 'HIGH' THEN 1
+        WHEN 'MEDIUM' THEN 2
+        ELSE 3
+      END ASC,
+      i.started_at ASC
+  `)
+    .bind(tenantId, tenantId, window.window_start, window.window_end)
+    .all();
+  return (result.results ?? []).map(mapHandoverItem);
+}
+
+async function handoverPreview(env, context) {
+  requirePermission(context, "handover:read");
+  const generatedAt = new Date();
+  const window = await getShiftWindow(env, context.tenant_id, generatedAt);
+  return {
+    ...window,
+    generated_at: generatedAt.toISOString(),
+    items: await listHandoverSnapshotItems(env, context.tenant_id, window),
+  };
+}
+
+async function getHandoverItems(env, handoverId) {
+  const result = await env.DB.prepare(`
+    SELECT *
+    FROM handover_items
+    WHERE handover_id = ?
+    ORDER BY started_at_snapshot ASC, id ASC
+  `)
+    .bind(handoverId)
+    .all();
+  return (result.results ?? []).map(mapHandoverItem);
+}
+
+async function mapHandover(env, row) {
+  return {
+    id: row.id,
+    version: Number(row.version),
+    window_start: row.window_start,
+    window_end: row.window_end,
+    observations: row.observations ?? null,
+    finalized_by_subject: row.finalized_by_subject,
+    finalized_at: row.finalized_at,
+    items: await getHandoverItems(env, row.id),
+  };
+}
+
+async function getRequiredHandover(env, context, handoverId) {
+  requirePermission(context, "handover:read");
+  const row = await env.DB.prepare(`
+    SELECT *
+    FROM handovers
+    WHERE tenant_id = ? AND id = ?
+  `)
+    .bind(context.tenant_id, handoverId)
+    .first();
+  if (!row) {
+    throw problem(
+      404,
+      "Handover not found",
+      "The requested handover was not found in the active tenant.",
+      "HANDOVER_NOT_FOUND",
+      "handover-not-found",
+    );
+  }
+  return mapHandover(env, row);
+}
+
+async function finalizeHandover(env, context, request) {
+  requirePermission(context, "handover:finalize");
+  const payload = validateHandoverFinalize(await readJson(request));
+  const now = new Date();
+  const window = await getShiftWindow(env, context.tenant_id, now);
+  const items = await listHandoverSnapshotItems(env, context.tenant_id, window);
+  const latest = await env.DB.prepare(`
+    SELECT MAX(version) AS version
+    FROM handovers
+    WHERE tenant_id = ? AND window_start = ? AND window_end = ?
+  `)
+    .bind(context.tenant_id, window.window_start, window.window_end)
+    .first();
+  const version = Number(latest?.version ?? 0) + 1;
+  const handoverId = crypto.randomUUID();
+  const finalizedAt = now.toISOString();
+
+  const statements = [
+    env.DB.prepare(`
+      INSERT INTO handovers(
+        id, tenant_id, window_start, window_end, version, observations,
+        finalized_by_subject, finalized_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      handoverId,
+      context.tenant_id,
+      window.window_start,
+      window.window_end,
+      version,
+      payload.observations,
+      context.actor_subject,
+      finalizedAt,
+      finalizedAt,
+    ),
+    ...items.map((item) =>
+      env.DB.prepare(`
+        INSERT INTO handover_items(
+          id, handover_id, incident_id, title_snapshot,
+          affected_resource_snapshot, severity_snapshot, status_snapshot,
+          started_at_snapshot, last_event_message_snapshot, last_event_at_snapshot
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        crypto.randomUUID(),
+        handoverId,
+        item.incident_id,
+        item.title,
+        item.affected_resource,
+        item.severity,
+        item.status,
+        item.started_at,
+        item.last_event_message,
+        item.last_event_at,
+      ),
+    ),
+  ];
+
+  try {
+    await env.DB.batch(statements);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/UNIQUE|constraint/i.test(message)) {
+      throw problem(
+        409,
+        "Handover version conflict",
+        "Another handover version was finalized concurrently. Reload and try again.",
+        "HANDOVER_VERSION_CONFLICT",
+        "handover-version-conflict",
+      );
+    }
+    throw error;
+  }
+
+  return getRequiredHandover(env, context, handoverId);
+}
+
+async function handoverHistory(env, context, url) {
+  requirePermission(context, "handover:read");
+  const query = parseHandoverListQuery(url);
+  const offset = (query.page - 1) * query.page_size;
+  const [countResult, listResult] = await env.DB.batch([
+    env.DB.prepare(
+      "SELECT COUNT(*) AS total FROM handovers WHERE tenant_id = ?",
+    ).bind(context.tenant_id),
+    env.DB.prepare(`
+      SELECT id, version, window_start, window_end,
+             finalized_by_subject, finalized_at
+      FROM handovers
+      WHERE tenant_id = ?
+      ORDER BY finalized_at DESC, id DESC
+      LIMIT ? OFFSET ?
+    `).bind(context.tenant_id, query.page_size, offset),
+  ]);
+
+  return {
+    items: (listResult.results ?? []).map((row) => ({
+      id: row.id,
+      version: Number(row.version),
+      window_start: row.window_start,
+      window_end: row.window_end,
+      finalized_by_subject: row.finalized_by_subject,
+      finalized_at: row.finalized_at,
+    })),
+    page: query.page,
+    page_size: query.page_size,
+    total: Number(countResult.results?.[0]?.total ?? 0),
+  };
+}
+
+async function latestHandover(env, context) {
+  requirePermission(context, "handover:read");
+  const row = await env.DB.prepare(`
+    SELECT *
+    FROM handovers
+    WHERE tenant_id = ?
+    ORDER BY finalized_at DESC, id DESC
+    LIMIT 1
+  `)
+    .bind(context.tenant_id)
+    .first();
+  if (!row) {
+    throw problem(
+      404,
+      "Handover not found",
+      "The requested handover was not found in the active tenant.",
+      "HANDOVER_NOT_FOUND",
+      "handover-not-found",
+    );
+  }
+  return mapHandover(env, row);
+}
+
 function validIncidentId(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
