@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy import asc, desc, func, select
 from sqlalchemy.orm import Session
 
+from app.modules.audit.infrastructure.repository import add_audit_event
 from app.modules.incidents.application.queries import (
     IncidentListQuery,
     IncidentPage,
@@ -128,6 +129,14 @@ class SqlAlchemyIncidentRepository:
         self.session.add(model)
         self.session.flush()
         self.session.add(_event_model(event))
+        add_audit_event(
+            self.session,
+            tenant_id=incident.tenant_id,
+            actor_subject=event.actor_subject,
+            action="incident.created",
+            resource_type="incident",
+            resource_id=incident.id,
+        )
         self.session.commit()
         self.session.refresh(model)
         return _to_domain(model)
@@ -145,6 +154,19 @@ class SqlAlchemyIncidentRepository:
         model.updated_at = incident.updated_at
         model.version = incident.version
         self.session.add(_event_model(event))
+        action = (
+            "incident.normalized"
+            if event.event_type is IncidentEventType.NORMALIZED
+            else "incident.updated"
+        )
+        add_audit_event(
+            self.session,
+            tenant_id=incident.tenant_id,
+            actor_subject=event.actor_subject,
+            action=action,
+            resource_type="incident",
+            resource_id=incident.id,
+        )
         self.session.commit()
         self.session.refresh(model)
         return _to_domain(model)
