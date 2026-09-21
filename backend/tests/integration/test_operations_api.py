@@ -1,11 +1,16 @@
 from datetime import UTC, datetime, timedelta
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import delete
+from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_session_factory
 from app.main import app
+from app.modules.tenancy.application.context import RequestContext
+from app.modules.tenancy.application.security import Role
+from app.modules.tenancy.presentation.dependencies import get_request_context
 from app.modules.incidents.infrastructure.models import IncidentEventModel, IncidentModel
 from app.modules.operations.infrastructure.models import HandoverItemModel, HandoverModel
 from app.modules.tenancy.infrastructure.models import TenantMembershipModel, TenantModel
@@ -126,3 +131,100 @@ def test_empty_handover_is_valid_and_versions_are_monotonic(client: TestClient) 
     assert first.json()["version"] == 1
     assert second.status_code == 201
     assert second.json()["version"] == 2
+
+
+def test_viewer_can_read_but_cannot_finalize_handover(client: TestClient) -> None:
+    seed = client.get("/api/v1/dashboard/summary")
+    assert seed.status_code == 200
+
+    viewer_context = RequestContext(
+        tenant_id=UUID("00000000-0000-4000-8000-000000000001"),
+        actor_subject="viewer@example.test",
+        roles=frozenset({Role.VIEWER}),
+    )
+    app.dependency_overrides[get_request_context] = lambda: viewer_context
+    try:
+        preview = client.get("/api/v1/handovers/preview")
+        finalize = client.post(
+            "/api/v1/handovers",
+            json={"observations": "Viewer cannot finalize."},
+        )
+    finally:
+        app.dependency_overrides.pop(get_request_context, None)
+
+    assert preview.status_code == 200
+    assert finalize.status_code == 403
+
+
+def test_handover_id_from_another_tenant_is_hidden(client: TestClient) -> None:
+    assert client.get("/api/v1/dashboard/summary").status_code == 200
+
+    other_tenant_id = uuid4()
+    other_handover_id = uuid4()
+    now = datetime.now(UTC)
+    factory = get_session_factory()
+    with factory() as session:
+        session.add(
+            TenantModel(
+                id=other_tenant_id,
+                slug=f"tenant-{other_tenant_id.hex[:8]}",
+                name="Other Tenant",
+                timezone="UTC",
+                is_active=True,
+            )
+        )
+        session.flush()
+        session.add(
+            HandoverModel(
+                id=other_handover_id,
+                tenant_id=other_tenant_id,
+                window_start=now - timedelta(hours=12),
+                window_end=now,
+                version=1,
+                observations=None,
+                finalized_by_subject="other@example.test",
+                finalized_at=now,
+            )
+        )
+        session.commit()
+
+    response = client.get(f"/api/v1/handovers/{other_handover_id}")
+    assert response.status_code == 404
+    assert response.json()["code"] == "HANDOVER_NOT_FOUND"
+
+
+def test_database_prevents_duplicate_handover_version(client: TestClient) -> None:
+    assert client.get("/api/v1/dashboard/summary").status_code == 200
+    tenant_id = UUID("00000000-0000-4000-8000-000000000001")
+    now = datetime.now(UTC)
+    start = now - timedelta(hours=12)
+
+    factory = get_session_factory()
+    with factory() as session:
+        session.add_all(
+            [
+                HandoverModel(
+                    id=uuid4(),
+                    tenant_id=tenant_id,
+                    window_start=start,
+                    window_end=now,
+                    version=1,
+                    observations=None,
+                    finalized_by_subject="operator-a@example.test",
+                    finalized_at=now,
+                ),
+                HandoverModel(
+                    id=uuid4(),
+                    tenant_id=tenant_id,
+                    window_start=start,
+                    window_end=now,
+                    version=1,
+                    observations=None,
+                    finalized_by_subject="operator-b@example.test",
+                    finalized_at=now,
+                ),
+            ]
+        )
+        with pytest.raises(IntegrityError):
+            session.commit()
+        session.rollback()
