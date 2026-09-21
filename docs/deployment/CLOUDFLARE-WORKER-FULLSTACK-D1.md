@@ -46,13 +46,15 @@ identidades são negadas até existir membership explícita.
 A binding `DB` é declarada sem `database_id` no repositório. O Wrangler usa
 automatic provisioning no primeiro deploy remoto.
 
-O schema é criado de forma idempotente pelo Worker:
+O schema é criado/evoluído de forma idempotente pelo Worker:
 
-- `tenants`;
+- `tenants`, incluindo `timezone`, `shift_start_local` e `shift_duration_minutes`;
 - `tenant_memberships`;
 - `incidents`;
 - `incident_events`;
-- índices tenant/status/severity/timeline.
+- `handovers`;
+- `handover_items`;
+- índices tenant/status/severity/timeline/handover.
 
 Somente dados sintéticos de demonstração são permitidos.
 
@@ -69,6 +71,12 @@ GET  /api/v1/incidents/{id}
 POST /api/v1/incidents/{id}/updates
 POST /api/v1/incidents/{id}/normalize
 GET  /api/v1/incidents/{id}/timeline
+GET  /api/v1/dashboard/summary
+GET  /api/v1/handovers/preview
+POST /api/v1/handovers
+GET  /api/v1/handovers
+GET  /api/v1/handovers/latest
+GET  /api/v1/handovers/{handover_id}
 ```
 
 Filtros e paginação preservam os nomes do backend canônico.
@@ -82,8 +90,21 @@ Configuração do painel:
 - Deploy command: `npx wrangler deploy`
 - Production branch: `main`
 
-Não é necessário cadastrar o D1 manualmente quando o automatic provisioning
-funciona no Build; o binding é criado no deploy.
+Para um D1 novo, o automatic provisioning pode criar o recurso no primeiro deploy.
+
+Para reutilizar um D1 já existente, o `wrangler.jsonc` deve possuir:
+
+```json
+{
+  "binding": "DB",
+  "database_name": "p0-noc-flow-cloud-v2-db",
+  "database_id": "<UUID-do-D1-existente>"
+}
+```
+
+Sem o `database_id`, o Wrangler tenta provisionar outro banco com o mesmo nome e
+o deploy falha com `A database with that name already exists`. O database ID não é
+segredo, mas precisa corresponder ao recurso correto da conta Cloudflare.
 
 ## Gates
 
@@ -99,6 +120,8 @@ Antes de homologar:
 - deploy Cloudflare verde;
 - `/api/v1/auth/me` retorna Admin para o usuário bootstrap;
 - criação/listagem/detalhe/update/timeline/normalização funcionam;
+- Dashboard e Passagem de Turno funcionam contra o D1 remoto;
+- snapshot de handover permanece imutável após normalização do incidente original;
 - janela anônima continua bloqueada pelo Access.
 
 ## Rollback
