@@ -2,8 +2,8 @@
 
 > Plataforma web de portfólio para o ciclo operacional de incidentes em NOC, construída com Angular, FastAPI, PostgreSQL, Docker e GitHub Actions.
 
-**Status:** 🟢 Sprint 3 — Auth, RBAC & Multi-Tenancy concluída tecnicamente  
-**Release candidata:** `v0.3.0-beta`  
+**Status:** 🟢 Sprint 4 — Dashboard & Passagem de Turno concluída tecnicamente; aguardando homologação manual  
+**Release candidata:** `v0.4.0-beta`  
 **Autor:** Matheus Santo  
 **Repositório:** `MSsanto/P0-NOC-Flow-Cloud-v2-`
 
@@ -24,9 +24,16 @@ O produto já permite:
 - validar lint/type-check, testes, builds, audits e smoke full-stack no GitHub Actions;
 - autenticar a demo privada por Cloudflare Access ou OIDC genérico;
 - aplicar RBAC server-side com perfis Admin, Supervisor, Operator e Viewer;
-- resolver memberships internas e bloquear acesso cross-tenant.
+- resolver memberships internas e bloquear acesso cross-tenant;
+- exibir dashboard operacional tenant-scoped com ativos, críticos e normalizados no turno;
+- calcular a janela de turno por timezone/configuração do tenant;
+- gerar preview de passagem de turno sem persistir draft;
+- finalizar passagem como snapshot versionado e imutável;
+- consultar latest, histórico paginado e versões específicas de handover;
+- preservar snapshots mesmo após o incidente original mudar;
+- aplicar permissions `handover:read` e `handover:finalize`.
 
-A execução local mantém um provider sintético isolado para desenvolvimento. A demo privada já suporta identidade confiável por **Cloudflare Access** ou **OIDC genérico**, com autorização server-side, memberships internas e isolamento por tenant. Produção pública continua bloqueada até homologação da candidata `v0.3.0-beta`.
+A execução local mantém um provider sintético isolado para desenvolvimento. A demo privada já suporta identidade confiável por **Cloudflare Access** ou **OIDC genérico**, com autorização server-side, memberships internas e isolamento por tenant. Produção pública continua bloqueada até homologação da candidata `v0.4.0-beta`.
 
 ## Stack executável
 
@@ -101,12 +108,21 @@ detect
 └─ compose-smoke: build stack → regressão Sprint 1 → cleanup
 ```
 
-A Sprint 2 acrescenta um segundo gate funcional:
+A Sprint 2 acrescenta um gate funcional de regressão:
 
 ```text
 Sprint 2 Functional Smoke
 criar → atualizar → timeline → filtrar/paginar → normalizar
 → timeline → rejeitar dupla normalização → rejeitar update pós-resolução
+```
+
+A Sprint 4 acrescenta o gate vertical do novo incremento:
+
+```text
+Sprint 4 Functional Smoke
+criar incidente → dashboard → preview → finalizar handover
+→ history/latest → normalizar incidente → validar snapshot imutável
+→ rejeitar tenant_id forjado
 ```
 
 Os smokes atravessam **Nginx → FastAPI → PostgreSQL**.
@@ -128,6 +144,12 @@ npm run build
 
 ```text
 GET  /api/v1/auth/me
+GET  /api/v1/dashboard/summary
+GET  /api/v1/handovers/preview
+POST /api/v1/handovers
+GET  /api/v1/handovers
+GET  /api/v1/handovers/latest
+GET  /api/v1/handovers/{handover_id}
 GET  /api/v1/incidents
 POST /api/v1/incidents
 GET  /api/v1/incidents/query
@@ -187,7 +209,7 @@ A candidata beta inclui validação de tokens OIDC/JWT, integração com Cloudfl
 
 A timeline é append-only no fluxo suportado e as ações validam o estado do incidente. Recursos fora do tenant ativo não são expostos pela API suportada.
 
-A `v0.3.0-beta` é homologável como ambiente local e demo privada protegida. O provider demo é restrito a `development`/`test`; ambientes protegidos exigem identidade externa validada. Produção pública permanece bloqueada por design até a homologação e o hardening final.
+A `v0.4.0-beta` é homologável como ambiente local e demo privada protegida. O provider demo é restrito a `development`/`test`; ambientes protegidos exigem identidade externa validada. Produção pública permanece bloqueada por design até a homologação e o hardening final.
 
 ## Arquitetura resumida
 
@@ -223,6 +245,8 @@ Destaques:
 
 - [Sprint 2 — evidências](docs/sprints/SPRINT_02.md)
 - [Sprint 3 — evidências](docs/sprints/SPRINT_03.md)
+- [Sprint 4 — evidências](docs/sprints/SPRINT_04.md)
+- [Homologação v0.4.0-beta](docs/releases/V0.4.0-BETA-HOMOLOGATION.md)
 - [Roteiro de homologação da v0.2.0-alpha](docs/releases/V0.2.0-ALPHA-HOMOLOGATION.md)
 - [Contrato executado de incidentes na Sprint 2](docs/api/SPRINT_02-INCIDENTS.md)
 - [Contrato geral da API](docs/06-API-CONTRACT.md)
@@ -237,7 +261,7 @@ Destaques:
 - **Sprint 1:** fundação executável e CRUD inicial de incidentes — concluída;
 - **Sprint 2:** atualizações, normalização, timeline e filtros — concluída tecnicamente;
 - **Sprint 3:** autenticação, RBAC e multi-tenancy confiável — concluída tecnicamente;
-- **Sprint 4:** dashboard e passagem de turno;
+- **Sprint 4:** dashboard e passagem de turno — concluída tecnicamente, aguardando homologação;
 - **Sprint 5:** auditoria e observabilidade;
 - **Sprint 6:** Azure e release v1.0.
 
