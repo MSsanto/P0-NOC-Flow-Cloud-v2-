@@ -313,8 +313,25 @@ UNIQUE (handover_id, incident_id)
 - a unique constraint é a defesa final contra corrida;
 - colisão concorrente retorna conflito controlado e não faz retry silencioso que esconda a disputa;
 - não existe update/delete HTTP de handover finalizado;
-- não será criada tabela `shifts` na Sprint 4.
+- não será criada tabela `shifts` na Sprint 4;
+- alterações em `tenants` para configuração de turno são aditivas e exigem backfill antes de `NOT NULL`.
 
 ### Migration
 
 A migration da Sprint 4 deve ser aditiva: criar as duas tabelas, constraints e índices sem alterar colunas existentes de incidentes. Não exige backfill.
+
+
+### Extensão planejada de `tenants` para cálculo de turno
+
+A mesma migration da Sprint 4 deve adicionar:
+
+| Campo | Regra planejada |
+|---|---|
+| `shift_start_local` | `time` local, obrigatório após backfill |
+| `shift_duration_minutes` | inteiro obrigatório; entre 60 e 1440; deve dividir 1440 sem resto |
+
+O valor é configuração operacional do tenant, não parâmetro enviado a cada handover.
+
+Para tenants já existentes, a migration deve realizar backfill explícito antes de aplicar `NOT NULL`. O valor usado para o ambiente sintético deve ser documentado no seed/configuração; não deve ser tratado como regra universal de negócio.
+
+Não será criada tabela `shifts` na Sprint 4.
