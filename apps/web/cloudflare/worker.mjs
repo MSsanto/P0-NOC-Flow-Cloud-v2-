@@ -22,20 +22,26 @@ const ROLE_PERMISSIONS = Object.freeze({
     "incident:create",
     "incident:update",
     "incident:normalize",
+    "handover:read",
+    "handover:finalize",
   ],
   Supervisor: [
     "incident:read",
     "incident:create",
     "incident:update",
     "incident:normalize",
+    "handover:read",
+    "handover:finalize",
   ],
   Operator: [
     "incident:read",
     "incident:create",
     "incident:update",
     "incident:normalize",
+    "handover:read",
+    "handover:finalize",
   ],
-  Viewer: ["incident:read"],
+  Viewer: ["incident:read", "handover:read"],
 });
 
 let schemaReadyPromise;
@@ -238,6 +244,213 @@ export function validateIncidentNormalize(value) {
     return { note: null };
   }
   return { note: requiredString(payload.note, "note", 3, 2000) };
+}
+
+export function validateHandoverFinalize(value) {
+  const payload = ensurePlainObject(value);
+  assertAllowedKeys(payload, new Set(["observations"]));
+  if (payload.observations === undefined || payload.observations === null) {
+    return { observations: null };
+  }
+  if (typeof payload.observations !== "string") {
+    throw problem(
+      422,
+      "Request validation failed",
+      "observations must be a string.",
+      "REQUEST_VALIDATION_FAILED",
+      "request-validation-failed",
+    );
+  }
+  const observations = payload.observations.trim();
+  if (observations === "") {
+    return { observations: null };
+  }
+  if (observations.length < 3 || observations.length > 4000) {
+    throw problem(
+      422,
+      "Request validation failed",
+      "observations must contain between 3 and 4000 characters.",
+      "REQUEST_VALIDATION_FAILED",
+      "request-validation-failed",
+    );
+  }
+  return { observations };
+}
+
+export function parseHandoverListQuery(url) {
+  return {
+    page: parsePositiveInteger(url.searchParams.get("page"), 1, "page"),
+    page_size: parsePositiveInteger(
+      url.searchParams.get("page_size"),
+      25,
+      "page_size",
+      100,
+    ),
+  };
+}
+
+function zonedParts(date, timeZone) {
+  let formatter;
+  try {
+    formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    });
+  } catch {
+    throw problem(
+      503,
+      "Shift configuration unavailable",
+      "Tenant timezone is invalid.",
+      "SHIFT_CONFIGURATION_INVALID",
+      "shift-configuration-invalid",
+    );
+  }
+  const parts = Object.fromEntries(
+    formatter
+      .formatToParts(date)
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, Number(part.value)]),
+  );
+  return {
+    year: parts.year,
+    month: parts.month,
+    day: parts.day,
+    hour: parts.hour,
+    minute: parts.minute,
+    second: parts.second,
+  };
+}
+
+function localPartsFromStamp(stamp) {
+  const date = new Date(stamp);
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
+    hour: date.getUTCHours(),
+    minute: date.getUTCMinutes(),
+    second: date.getUTCSeconds(),
+  };
+}
+
+function localPartsToUtc(parts, timeZone) {
+  const targetStamp = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second ?? 0,
+  );
+  let guess = targetStamp;
+  for (let index = 0; index < 4; index += 1) {
+    const observed = zonedParts(new Date(guess), timeZone);
+    const observedStamp = Date.UTC(
+      observed.year,
+      observed.month - 1,
+      observed.day,
+      observed.hour,
+      observed.minute,
+      observed.second,
+    );
+    const delta = targetStamp - observedStamp;
+    guess += delta;
+    if (delta === 0) break;
+  }
+  return new Date(guess);
+}
+
+export function calculateShiftWindow({
+  timezone,
+  shift_start_local,
+  shift_duration_minutes,
+  now = new Date(),
+}) {
+  const duration = Number(shift_duration_minutes);
+  if (
+    !Number.isInteger(duration) ||
+    duration < 60 ||
+    duration > 1440 ||
+    1440 % duration !== 0
+  ) {
+    throw problem(
+      503,
+      "Shift configuration unavailable",
+      "Tenant shift duration is invalid.",
+      "SHIFT_CONFIGURATION_INVALID",
+      "shift-configuration-invalid",
+    );
+  }
+
+  const match =
+    typeof shift_start_local === "string"
+      ? shift_start_local.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/)
+      : null;
+  if (!match) {
+    throw problem(
+      503,
+      "Shift configuration unavailable",
+      "Tenant shift start is invalid.",
+      "SHIFT_CONFIGURATION_INVALID",
+      "shift-configuration-invalid",
+    );
+  }
+
+  const anchorHour = Number(match[1]);
+  const anchorMinute = Number(match[2]);
+  const anchorSecond = Number(match[3] ?? "0");
+  if (anchorHour > 23 || anchorMinute > 59 || anchorSecond > 59) {
+    throw problem(
+      503,
+      "Shift configuration unavailable",
+      "Tenant shift start is invalid.",
+      "SHIFT_CONFIGURATION_INVALID",
+      "shift-configuration-invalid",
+    );
+  }
+
+  const localNow = zonedParts(now, timezone);
+  const localNowStamp = Date.UTC(
+    localNow.year,
+    localNow.month - 1,
+    localNow.day,
+    localNow.hour,
+    localNow.minute,
+    localNow.second,
+  );
+  let anchorStamp = Date.UTC(
+    localNow.year,
+    localNow.month - 1,
+    localNow.day,
+    anchorHour,
+    anchorMinute,
+    anchorSecond,
+  );
+  if (localNowStamp < anchorStamp) {
+    anchorStamp -= 24 * 60 * 60 * 1000;
+  }
+
+  const elapsedMinutes = Math.floor((localNowStamp - anchorStamp) / 60000);
+  const slot = Math.floor(elapsedMinutes / duration);
+  const startLocalStamp = anchorStamp + slot * duration * 60000;
+  const endLocalStamp = startLocalStamp + duration * 60000;
+
+  return {
+    window_start: localPartsToUtc(
+      localPartsFromStamp(startLocalStamp),
+      timezone,
+    ).toISOString(),
+    window_end: localPartsToUtc(
+      localPartsFromStamp(endLocalStamp),
+      timezone,
+    ).toISOString(),
+  };
 }
 
 function parsePositiveInteger(value, fallback, field, max) {
@@ -563,6 +776,37 @@ async function authenticateAccessRequest(request) {
   };
 }
 
+async function ensureTenantOperationalColumns(env) {
+  const info = await env.DB.prepare("PRAGMA table_info(tenants)").all();
+  const columns = new Set((info.results ?? []).map((row) => row.name));
+  const statements = [];
+
+  if (!columns.has("timezone")) {
+    statements.push(
+      env.DB.prepare(
+        "ALTER TABLE tenants ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC'",
+      ),
+    );
+  }
+  if (!columns.has("shift_start_local")) {
+    statements.push(
+      env.DB.prepare(
+        "ALTER TABLE tenants ADD COLUMN shift_start_local TEXT NOT NULL DEFAULT '06:00:00'",
+      ),
+    );
+  }
+  if (!columns.has("shift_duration_minutes")) {
+    statements.push(
+      env.DB.prepare(
+        "ALTER TABLE tenants ADD COLUMN shift_duration_minutes INTEGER NOT NULL DEFAULT 720",
+      ),
+    );
+  }
+  if (statements.length > 0) {
+    await env.DB.batch(statements);
+  }
+}
+
 async function ensureSchema(env) {
   if (!env.DB) {
     throw problem(
@@ -575,15 +819,18 @@ async function ensureSchema(env) {
   }
 
   if (!schemaReadyPromise) {
-    schemaReadyPromise = env.DB
-      .batch([
+    schemaReadyPromise = (async () => {
+      await env.DB.batch([
         env.DB.prepare(`
           CREATE TABLE IF NOT EXISTS tenants (
             id TEXT PRIMARY KEY,
             slug TEXT NOT NULL UNIQUE,
             name TEXT NOT NULL,
             is_active INTEGER NOT NULL DEFAULT 1,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            timezone TEXT NOT NULL DEFAULT 'UTC',
+            shift_start_local TEXT NOT NULL DEFAULT '06:00:00',
+            shift_duration_minutes INTEGER NOT NULL DEFAULT 720
           )
         `),
         env.DB.prepare(`
@@ -633,6 +880,43 @@ async function ensureSchema(env) {
             FOREIGN KEY (incident_id) REFERENCES incidents(id)
           )
         `),
+      ]);
+
+      await ensureTenantOperationalColumns(env);
+
+      await env.DB.batch([
+        env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS handovers (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            window_start TEXT NOT NULL,
+            window_end TEXT NOT NULL,
+            version INTEGER NOT NULL CHECK (version >= 1),
+            observations TEXT,
+            finalized_by_subject TEXT NOT NULL,
+            finalized_at TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE (tenant_id, window_start, window_end, version),
+            FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+          )
+        `),
+        env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS handover_items (
+            id TEXT PRIMARY KEY,
+            handover_id TEXT NOT NULL,
+            incident_id TEXT NOT NULL,
+            title_snapshot TEXT NOT NULL,
+            affected_resource_snapshot TEXT NOT NULL,
+            severity_snapshot TEXT NOT NULL,
+            status_snapshot TEXT NOT NULL,
+            started_at_snapshot TEXT NOT NULL,
+            last_event_message_snapshot TEXT,
+            last_event_at_snapshot TEXT,
+            UNIQUE (handover_id, incident_id),
+            FOREIGN KEY (handover_id) REFERENCES handovers(id),
+            FOREIGN KEY (incident_id) REFERENCES incidents(id)
+          )
+        `),
         env.DB.prepare(
           "CREATE INDEX IF NOT EXISTS idx_incidents_tenant_started ON incidents(tenant_id, started_at DESC)",
         ),
@@ -645,20 +929,30 @@ async function ensureSchema(env) {
         env.DB.prepare(
           "CREATE INDEX IF NOT EXISTS idx_events_tenant_incident ON incident_events(tenant_id, incident_id, occurred_at)",
         ),
-      ])
-      .then(async () => {
-        const now = new Date().toISOString();
-        await env.DB.prepare(
-          `INSERT OR IGNORE INTO tenants(id, slug, name, is_active, created_at)
-           VALUES (?, 'private-demo', 'NOC Flow Private Demo', 1, ?)`,
-        )
-          .bind(TENANT_ID, now)
-          .run();
-      })
-      .catch((error) => {
-        schemaReadyPromise = undefined;
-        throw error;
-      });
+        env.DB.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_handovers_tenant_finalized ON handovers(tenant_id, finalized_at DESC)",
+        ),
+        env.DB.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_handovers_tenant_window_version ON handovers(tenant_id, window_start DESC, version DESC)",
+        ),
+        env.DB.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_handover_items_handover ON handover_items(handover_id)",
+        ),
+      ]);
+
+      const now = new Date().toISOString();
+      await env.DB.prepare(`
+        INSERT OR IGNORE INTO tenants(
+          id, slug, name, is_active, created_at,
+          timezone, shift_start_local, shift_duration_minutes
+        ) VALUES (?, 'private-demo', 'NOC Flow Private Demo', 1, ?, 'UTC', '06:00:00', 720)
+      `)
+        .bind(TENANT_ID, now)
+        .run();
+    })().catch((error) => {
+      schemaReadyPromise = undefined;
+      throw error;
+    });
   }
   return schemaReadyPromise;
 }
@@ -964,6 +1258,347 @@ async function listTimeline(env, context, incidentId) {
   return (result.results ?? []).map(mapEvent);
 }
 
+
+async function getShiftWindow(env, tenantId, now = new Date()) {
+  const tenant = await env.DB.prepare(`
+    SELECT timezone, shift_start_local, shift_duration_minutes, is_active
+    FROM tenants
+    WHERE id = ?
+  `)
+    .bind(tenantId)
+    .first();
+  if (!tenant || Number(tenant.is_active) !== 1) {
+    throw problem(
+      503,
+      "Shift configuration unavailable",
+      "Active tenant configuration was not found.",
+      "SHIFT_CONFIGURATION_INVALID",
+      "shift-configuration-invalid",
+    );
+  }
+  return calculateShiftWindow({
+    timezone: tenant.timezone,
+    shift_start_local: tenant.shift_start_local,
+    shift_duration_minutes: Number(tenant.shift_duration_minutes),
+    now,
+  });
+}
+
+function mapDashboardItem(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    affected_resource: row.affected_resource,
+    severity: row.severity,
+    status: row.status,
+    started_at: row.started_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function mapHandoverItem(row) {
+  return {
+    incident_id: row.incident_id ?? row.id,
+    title: row.title ?? row.title_snapshot,
+    affected_resource: row.affected_resource ?? row.affected_resource_snapshot,
+    severity: row.severity ?? row.severity_snapshot,
+    status: row.status ?? row.status_snapshot,
+    started_at: row.started_at ?? row.started_at_snapshot,
+    last_event_message:
+      row.last_event_message ?? row.last_event_message_snapshot ?? null,
+    last_event_at: row.last_event_at ?? row.last_event_at_snapshot ?? null,
+  };
+}
+
+async function listDashboardItems(env, tenantId) {
+  const result = await env.DB.prepare(`
+    SELECT id, title, affected_resource, severity, status, started_at, updated_at
+    FROM incidents
+    WHERE tenant_id = ? AND status NOT IN ('RESOLVED', 'CLOSED')
+    ORDER BY
+      CASE severity
+        WHEN 'CRITICAL' THEN 0
+        WHEN 'HIGH' THEN 1
+        WHEN 'MEDIUM' THEN 2
+        ELSE 3
+      END ASC,
+      started_at ASC
+  `)
+    .bind(tenantId)
+    .all();
+  return (result.results ?? []).map(mapDashboardItem);
+}
+
+async function countResolvedInWindow(env, tenantId, window) {
+  const row = await env.DB.prepare(`
+    SELECT COUNT(DISTINCT incident_id) AS total
+    FROM incident_events
+    WHERE tenant_id = ?
+      AND event_type = 'INCIDENT_NORMALIZED'
+      AND occurred_at >= ?
+      AND occurred_at < ?
+  `)
+    .bind(tenantId, window.window_start, window.window_end)
+    .first();
+  return Number(row?.total ?? 0);
+}
+
+async function dashboardSummary(env, context) {
+  requirePermission(context, "incident:read");
+  const window = await getShiftWindow(env, context.tenant_id);
+  const items = await listDashboardItems(env, context.tenant_id);
+  return {
+    active_count: items.length,
+    critical_active_count: items.filter((item) => item.severity === "CRITICAL")
+      .length,
+    resolved_in_shift_count: await countResolvedInWindow(
+      env,
+      context.tenant_id,
+      window,
+    ),
+    shift: window,
+    items,
+  };
+}
+
+async function listHandoverSnapshotItems(env, tenantId, window) {
+  const result = await env.DB.prepare(`
+    SELECT
+      i.id AS incident_id,
+      i.title,
+      i.affected_resource,
+      i.severity,
+      i.status,
+      i.started_at,
+      (
+        SELECT e.message
+        FROM incident_events e
+        WHERE e.tenant_id = i.tenant_id AND e.incident_id = i.id
+        ORDER BY e.occurred_at DESC, e.id DESC
+        LIMIT 1
+      ) AS last_event_message,
+      (
+        SELECT e.occurred_at
+        FROM incident_events e
+        WHERE e.tenant_id = i.tenant_id AND e.incident_id = i.id
+        ORDER BY e.occurred_at DESC, e.id DESC
+        LIMIT 1
+      ) AS last_event_at
+    FROM incidents i
+    WHERE i.tenant_id = ?
+      AND (
+        i.status NOT IN ('RESOLVED', 'CLOSED')
+        OR i.id IN (
+          SELECT DISTINCT incident_id
+          FROM incident_events
+          WHERE tenant_id = ?
+            AND event_type = 'INCIDENT_NORMALIZED'
+            AND occurred_at >= ?
+            AND occurred_at < ?
+        )
+      )
+    ORDER BY
+      CASE i.severity
+        WHEN 'CRITICAL' THEN 0
+        WHEN 'HIGH' THEN 1
+        WHEN 'MEDIUM' THEN 2
+        ELSE 3
+      END ASC,
+      i.started_at ASC
+  `)
+    .bind(tenantId, tenantId, window.window_start, window.window_end)
+    .all();
+  return (result.results ?? []).map(mapHandoverItem);
+}
+
+async function handoverPreview(env, context) {
+  requirePermission(context, "handover:read");
+  const generatedAt = new Date();
+  const window = await getShiftWindow(env, context.tenant_id, generatedAt);
+  return {
+    ...window,
+    generated_at: generatedAt.toISOString(),
+    items: await listHandoverSnapshotItems(env, context.tenant_id, window),
+  };
+}
+
+async function getHandoverItems(env, handoverId) {
+  const result = await env.DB.prepare(`
+    SELECT *
+    FROM handover_items
+    WHERE handover_id = ?
+    ORDER BY started_at_snapshot ASC, id ASC
+  `)
+    .bind(handoverId)
+    .all();
+  return (result.results ?? []).map(mapHandoverItem);
+}
+
+async function mapHandover(env, row) {
+  return {
+    id: row.id,
+    version: Number(row.version),
+    window_start: row.window_start,
+    window_end: row.window_end,
+    observations: row.observations ?? null,
+    finalized_by_subject: row.finalized_by_subject,
+    finalized_at: row.finalized_at,
+    items: await getHandoverItems(env, row.id),
+  };
+}
+
+async function getRequiredHandover(env, context, handoverId) {
+  requirePermission(context, "handover:read");
+  const row = await env.DB.prepare(`
+    SELECT *
+    FROM handovers
+    WHERE tenant_id = ? AND id = ?
+  `)
+    .bind(context.tenant_id, handoverId)
+    .first();
+  if (!row) {
+    throw problem(
+      404,
+      "Handover not found",
+      "The requested handover was not found in the active tenant.",
+      "HANDOVER_NOT_FOUND",
+      "handover-not-found",
+    );
+  }
+  return mapHandover(env, row);
+}
+
+async function finalizeHandover(env, context, request) {
+  requirePermission(context, "handover:finalize");
+  const payload = validateHandoverFinalize(await readJson(request));
+  const now = new Date();
+  const window = await getShiftWindow(env, context.tenant_id, now);
+  const items = await listHandoverSnapshotItems(env, context.tenant_id, window);
+  const latest = await env.DB.prepare(`
+    SELECT MAX(version) AS version
+    FROM handovers
+    WHERE tenant_id = ? AND window_start = ? AND window_end = ?
+  `)
+    .bind(context.tenant_id, window.window_start, window.window_end)
+    .first();
+  const version = Number(latest?.version ?? 0) + 1;
+  const handoverId = crypto.randomUUID();
+  const finalizedAt = now.toISOString();
+
+  const statements = [
+    env.DB.prepare(`
+      INSERT INTO handovers(
+        id, tenant_id, window_start, window_end, version, observations,
+        finalized_by_subject, finalized_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      handoverId,
+      context.tenant_id,
+      window.window_start,
+      window.window_end,
+      version,
+      payload.observations,
+      context.actor_subject,
+      finalizedAt,
+      finalizedAt,
+    ),
+    ...items.map((item) =>
+      env.DB.prepare(`
+        INSERT INTO handover_items(
+          id, handover_id, incident_id, title_snapshot,
+          affected_resource_snapshot, severity_snapshot, status_snapshot,
+          started_at_snapshot, last_event_message_snapshot, last_event_at_snapshot
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        crypto.randomUUID(),
+        handoverId,
+        item.incident_id,
+        item.title,
+        item.affected_resource,
+        item.severity,
+        item.status,
+        item.started_at,
+        item.last_event_message,
+        item.last_event_at,
+      ),
+    ),
+  ];
+
+  try {
+    await env.DB.batch(statements);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/UNIQUE|constraint/i.test(message)) {
+      throw problem(
+        409,
+        "Handover version conflict",
+        "Another handover version was finalized concurrently. Reload and try again.",
+        "HANDOVER_VERSION_CONFLICT",
+        "handover-version-conflict",
+      );
+    }
+    throw error;
+  }
+
+  return getRequiredHandover(env, context, handoverId);
+}
+
+async function handoverHistory(env, context, url) {
+  requirePermission(context, "handover:read");
+  const query = parseHandoverListQuery(url);
+  const offset = (query.page - 1) * query.page_size;
+  const [countResult, listResult] = await env.DB.batch([
+    env.DB.prepare(
+      "SELECT COUNT(*) AS total FROM handovers WHERE tenant_id = ?",
+    ).bind(context.tenant_id),
+    env.DB.prepare(`
+      SELECT id, version, window_start, window_end,
+             finalized_by_subject, finalized_at
+      FROM handovers
+      WHERE tenant_id = ?
+      ORDER BY finalized_at DESC, id DESC
+      LIMIT ? OFFSET ?
+    `).bind(context.tenant_id, query.page_size, offset),
+  ]);
+
+  return {
+    items: (listResult.results ?? []).map((row) => ({
+      id: row.id,
+      version: Number(row.version),
+      window_start: row.window_start,
+      window_end: row.window_end,
+      finalized_by_subject: row.finalized_by_subject,
+      finalized_at: row.finalized_at,
+    })),
+    page: query.page,
+    page_size: query.page_size,
+    total: Number(countResult.results?.[0]?.total ?? 0),
+  };
+}
+
+async function latestHandover(env, context) {
+  requirePermission(context, "handover:read");
+  const row = await env.DB.prepare(`
+    SELECT *
+    FROM handovers
+    WHERE tenant_id = ?
+    ORDER BY finalized_at DESC, id DESC
+    LIMIT 1
+  `)
+    .bind(context.tenant_id)
+    .first();
+  if (!row) {
+    throw problem(
+      404,
+      "Handover not found",
+      "The requested handover was not found in the active tenant.",
+      "HANDOVER_NOT_FOUND",
+      "handover-not-found",
+    );
+  }
+  return mapHandover(env, row);
+}
+
 function validIncidentId(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
@@ -1001,6 +1636,54 @@ async function routeApi(request, env, requestId) {
         roles: [context.role],
         permissions: [...context.permissions].sort(),
       },
+      requestId,
+    );
+  }
+
+  if (path === `${API_PREFIX}/dashboard/summary`) {
+    if (request.method !== "GET") methodNotAllowed();
+    return jsonResponse(await dashboardSummary(env, context), requestId);
+  }
+
+  if (path === `${API_PREFIX}/handovers/preview`) {
+    if (request.method !== "GET") methodNotAllowed();
+    return jsonResponse(await handoverPreview(env, context), requestId);
+  }
+
+  if (path === `${API_PREFIX}/handovers/latest`) {
+    if (request.method !== "GET") methodNotAllowed();
+    return jsonResponse(await latestHandover(env, context), requestId);
+  }
+
+  if (path === `${API_PREFIX}/handovers`) {
+    if (request.method === "GET") {
+      return jsonResponse(await handoverHistory(env, context, url), requestId);
+    }
+    if (request.method === "POST") {
+      return jsonResponse(
+        await finalizeHandover(env, context, request),
+        requestId,
+        201,
+      );
+    }
+    methodNotAllowed();
+  }
+
+  const handoverDetailMatch = path.match(/^\/api\/v1\/handovers\/([^/]+)$/);
+  if (handoverDetailMatch) {
+    if (request.method !== "GET") methodNotAllowed();
+    const handoverId = handoverDetailMatch[1];
+    if (!validIncidentId(handoverId)) {
+      throw problem(
+        422,
+        "Request validation failed",
+        "handover_id must be a valid UUID.",
+        "REQUEST_VALIDATION_FAILED",
+        "request-validation-failed",
+      );
+    }
+    return jsonResponse(
+      await getRequiredHandover(env, context, handoverId),
       requestId,
     );
   }
