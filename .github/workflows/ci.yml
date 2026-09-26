@@ -67,7 +67,7 @@ jobs:
         run: alembic upgrade head
       - name: Run backend tests with coverage
         working-directory: backend
-        run: pytest --cov=app --cov-report=term-missing --cov-report=xml
+        run: pytest --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=90
 
       - name: Publish backend coverage summary
         working-directory: backend
