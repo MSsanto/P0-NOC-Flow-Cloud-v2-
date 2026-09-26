@@ -85,7 +85,9 @@ O token prova a identidade. A autorização final é resolvida pela aplicação 
 
 O badge de CI deve apontar para o workflow real. Quantidade de testes, cobertura e performance só podem ser publicadas quando produzidas automaticamente por pipeline reproduzível.
 
-A branch de evidências adiciona `pytest-cov`, relatório XML e resumo do percentual no GitHub Actions, sem inventar meta ou bloquear o pipeline antes de conhecer a baseline real.
+O CI do PR #61 mediu, em 25/09/2026, **53 testes backend aprovados**, **24 testes frontend aprovados** e **95% de cobertura de linhas no backend**. Os audits Python e npm não encontraram vulnerabilidades conhecidas. Após medir a baseline, o gate mínimo foi definido em **90%** para impedir regressão silenciosa.
+
+Esses números descrevem uma execução identificável do pipeline e devem ser atualizados quando a baseline mudar.
 
 ## O que eu mudaria hoje
 
