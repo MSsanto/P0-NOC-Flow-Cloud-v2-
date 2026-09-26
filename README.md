@@ -1,9 +1,11 @@
 # P0 — NOC Flow Cloud v2
 
+[![CI](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/actions/workflows/ci.yml/badge.svg)](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/actions/workflows/ci.yml)
+
 > Plataforma web de portfólio para o ciclo operacional de incidentes em NOC, construída com Angular, FastAPI, PostgreSQL, Docker e GitHub Actions.
 
-**Status:** 🟢 Sprint 4 — Dashboard & Passagem de Turno concluída e homologada para demo privada  
-**Release candidata:** `v0.4.0-beta`  
+**Status:** 🟡 Sprint 5 — Auditoria & Observabilidade em revisão; Sprint 4 homologada para demo privada  
+**Release atual:** `v0.4.0-beta`  
 **Autor:** Matheus Santo  
 **Repositório:** `MSsanto/P0-NOC-Flow-Cloud-v2-`
 
@@ -255,6 +257,7 @@ Destaques:
 - [Segurança](docs/08-SECURITY-PRIVACY.md)
 - [Estratégia de testes](docs/09-TEST-STRATEGY.md)
 - [ADRs](docs/adr/)
+- [Evidências do case, trade-offs e limites](docs/portfolio/CASE-EVIDENCE.md)
 
 ## Roadmap
 
@@ -262,7 +265,7 @@ Destaques:
 - **Sprint 2:** atualizações, normalização, timeline e filtros — concluída tecnicamente;
 - **Sprint 3:** autenticação, RBAC e multi-tenancy confiável — concluída tecnicamente;
 - **Sprint 4:** dashboard e passagem de turno — concluída e homologada para demo privada;
-- **Sprint 5:** auditoria e observabilidade;
+- **Sprint 5:** auditoria e observabilidade — em revisão nos PRs [#59](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/pull/59) e [#60](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/pull/60);
 - **Sprint 6:** Azure e release v1.0.
 
 Integrações com monitoramento/notificações (Zabbix + WhatsApp/Evolution) e ITSM (Plusoft/GLPI/Zammad) permanecem no backlog de evolução e não fazem parte da alpha atual.
