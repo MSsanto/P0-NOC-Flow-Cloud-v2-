@@ -129,6 +129,18 @@ criar incidente → dashboard → preview → finalizar handover
 
 Os smokes atravessam **Nginx → FastAPI → PostgreSQL**.
 
+### Métricas verificadas
+
+Baseline medida pelo CI do [PR #61](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/pull/61) em 25/09/2026:
+
+- **53 testes backend** aprovados;
+- **24 testes frontend** aprovados;
+- **95% de cobertura de linhas no backend**;
+- **0 vulnerabilidades conhecidas** nos audits Python e npm;
+- gate de cobertura configurado em **90%** para impedir regressão silenciosa.
+
+Os números descrevem essa execução e devem ser atualizados quando a baseline mudar.
+
 Comandos locais úteis:
 
 ```bash
