@@ -96,3 +96,7 @@ Fonte canônica: [`docs/scrum/`](scrum/README.md)
 A documentação deve refletir o comportamento e as decisões reais do projeto. Se a implementação divergir, a mudança deve atualizar o documento correspondente e, quando houver decisão arquitetural relevante, criar ou superseder um ADR.
 
 Arquivos numerados antigos que apontam para documentos em `scrum/` são mantidos somente para compatibilidade de links históricos; a fonte canônica é sempre o arquivo indicado no novo diretório.
+
+## Portfólio e comunicação técnica
+
+- [Evidências do case, trade-offs e limites](portfolio/CASE-EVIDENCE.md)

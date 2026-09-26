@@ -1,9 +1,11 @@
 # P0 — NOC Flow Cloud v2
 
+[![CI](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/actions/workflows/ci.yml/badge.svg)](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/actions/workflows/ci.yml)
+
 > Plataforma web de portfólio para o ciclo operacional de incidentes em NOC, construída com Angular, FastAPI, PostgreSQL, Docker e GitHub Actions.
 
-**Status:** 🟢 Sprint 4 — Dashboard & Passagem de Turno concluída e homologada para demo privada  
-**Release candidata:** `v0.4.0-beta`  
+**Status:** 🟡 Sprint 5 — Auditoria & Observabilidade em revisão; Sprint 4 homologada para demo privada  
+**Release atual:** `v0.4.0-beta`  
 **Autor:** Matheus Santo  
 **Repositório:** `MSsanto/P0-NOC-Flow-Cloud-v2-`
 
@@ -126,6 +128,18 @@ criar incidente → dashboard → preview → finalizar handover
 ```
 
 Os smokes atravessam **Nginx → FastAPI → PostgreSQL**.
+
+### Métricas verificadas
+
+Baseline medida pelo CI do [PR #61](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/pull/61) em 25/09/2026:
+
+- **53 testes backend** aprovados;
+- **24 testes frontend** aprovados;
+- **95% de cobertura de linhas no backend**;
+- **0 vulnerabilidades conhecidas** nos audits Python e npm;
+- gate de cobertura configurado em **90%** para impedir regressão silenciosa.
+
+Os números descrevem essa execução e devem ser atualizados quando a baseline mudar.
 
 Comandos locais úteis:
 
@@ -255,6 +269,7 @@ Destaques:
 - [Segurança](docs/08-SECURITY-PRIVACY.md)
 - [Estratégia de testes](docs/09-TEST-STRATEGY.md)
 - [ADRs](docs/adr/)
+- [Evidências do case, trade-offs e limites](docs/portfolio/CASE-EVIDENCE.md)
 
 ## Roadmap
 
@@ -262,7 +277,7 @@ Destaques:
 - **Sprint 2:** atualizações, normalização, timeline e filtros — concluída tecnicamente;
 - **Sprint 3:** autenticação, RBAC e multi-tenancy confiável — concluída tecnicamente;
 - **Sprint 4:** dashboard e passagem de turno — concluída e homologada para demo privada;
-- **Sprint 5:** auditoria e observabilidade;
+- **Sprint 5:** auditoria e observabilidade — em revisão nos PRs [#59](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/pull/59) e [#60](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/pull/60);
 - **Sprint 6:** Azure e release v1.0.
 
 Integrações com monitoramento/notificações (Zabbix + WhatsApp/Evolution) e ITSM (Plusoft/GLPI/Zammad) permanecem no backlog de evolução e não fazem parte da alpha atual.
