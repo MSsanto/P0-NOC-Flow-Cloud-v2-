@@ -1,12 +1,13 @@
 import json
 import logging
 
+from fastapi import APIRouter
 from fastapi.testclient import TestClient
 
 from app.core import middleware
 from app.core.config import get_settings
 from app.core.logging import JsonFormatter
-from app.main import app
+from app.main import app, create_app
 
 
 def test_json_formatter_emits_structured_safe_fields() -> None:
@@ -68,4 +69,51 @@ def test_request_log_correlates_request_and_trace_without_headers(monkeypatch) -
     assert extra["route"] == "/health/live"
     assert extra["method"] == "GET"
     assert extra["status_code"] == 200
+    assert "must-not-be-logged" not in repr(extra)
+
+
+def test_invalid_w3c_trace_context_is_not_correlated() -> None:
+    assert middleware._resolve_trace_id(  # noqa: SLF001
+        "00-00000000000000000000000000000000-b7ad6b7169203331-01"
+    ) is None
+    assert middleware._resolve_trace_id(  # noqa: SLF001
+        "00-0af7651916cd43dd8448eb211c80319c-0000000000000000-01"
+    ) is None
+    assert middleware._resolve_trace_id(  # noqa: SLF001
+        "ff-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+    ) is None
+
+
+def test_unhandled_exception_is_logged_with_request_correlation(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def capture(message: str, *, extra: dict[str, object]) -> None:
+        captured["message"] = message
+        captured["extra"] = extra
+
+    monkeypatch.setattr(middleware.logger, "exception", capture)
+
+    test_app = create_app()
+    router = APIRouter()
+
+    @router.get("/_test/unhandled")
+    def unhandled() -> None:
+        raise RuntimeError("must-not-be-logged")
+
+    test_app.include_router(router, prefix="/api/v1")
+
+    with TestClient(test_app, raise_server_exceptions=False) as client:
+        response = client.get(
+            "/api/v1/_test/unhandled",
+            headers={"X-Request-ID": "req-unhandled-1"},
+        )
+
+    assert response.status_code == 500
+    assert captured["message"] == "http_request"
+    extra = captured["extra"]
+    assert isinstance(extra, dict)
+    assert extra["request_id"] == "req-unhandled-1"
+    assert extra["route"] == "/_test/unhandled"
+    assert extra["method"] == "GET"
+    assert extra["status_code"] == 500
     assert "must-not-be-logged" not in repr(extra)
