@@ -65,9 +65,29 @@ jobs:
       - name: Apply PostgreSQL migration
         working-directory: backend
         run: alembic upgrade head
-      - name: Run backend tests
+      - name: Run backend tests with coverage
         working-directory: backend
-        run: pytest
+        run: pytest --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=90
+
+      - name: Publish backend coverage summary
+        working-directory: backend
+        run: |
+          python - <<'PY'
+          import os
+          import xml.etree.ElementTree as ET
+
+          rate = float(ET.parse("coverage.xml").getroot().attrib["line-rate"])
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write(f"## Backend coverage\n\n**{rate * 100:.2f}%** line coverage\n")
+          PY
+
+      - name: Upload backend coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          retention-days: 14
+
       - name: Audit Python dependencies
         working-directory: backend
         run: pip-audit
