@@ -15,8 +15,18 @@ import { AuthContextService } from './core/auth/auth-context.service';
       <header class="app-header" role="banner">
         <div>
           <div class="brand">
-            <strong>NOC Flow Cloud v2</strong>
-            <span class="environment-badge" aria-label="Versão alpha">alpha</span>
+            <img
+              class="brand-logo"
+              src="/brand/nocflow-brand.jpg"
+              alt=""
+              width="104"
+              height="104"
+              aria-hidden="true"
+            />
+            <div class="brand-copy">
+              <strong>NOC Flow Cloud v2</strong>
+              <span class="environment-badge" aria-label="Versão alpha">alpha</span>
+            </div>
           </div>
 
           <div class="identity" aria-live="polite">
@@ -87,11 +97,30 @@ import { AuthContextService } from './core/auth/auth-context.service';
       gap: 1rem;
     }
 
-    .brand, .identity, .primary-nav {
+    .brand, .brand-copy, .identity, .primary-nav {
       display: flex;
       align-items: center;
       gap: 0.75rem;
       min-width: 0;
+    }
+
+    .brand-logo {
+      width: 6.5rem;
+      height: 6.5rem;
+      object-fit: cover;
+      border-radius: 0.85rem;
+      border: 1px solid color-mix(in srgb, CanvasText 14%, transparent);
+      flex: 0 0 auto;
+    }
+
+    .brand-copy {
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .brand-copy strong {
+      font-size: 1.05rem;
+      letter-spacing: -0.01em;
     }
 
     .identity {
@@ -141,6 +170,11 @@ import { AuthContextService } from './core/auth/auth-context.service';
       .app-header > div, .identity {
         align-items: flex-start;
         flex-direction: column;
+      }
+
+      .brand-logo {
+        width: 5rem;
+        height: 5rem;
       }
     }
   `,
