@@ -48,15 +48,11 @@ A demo privada usa um adapter em Cloudflare Worker/D1, mantendo o contrato HTTP 
 
 ## Rodando localmente
 
-### Docker
-
 ```bash
 git clone https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-.git
 cd P0-NOC-Flow-Cloud-v2-
 docker compose up -d --build
 ```
-
-Acessos locais:
 
 - Frontend: `http://localhost:4200`
 - API: `http://localhost:8000/api/v1`
@@ -90,8 +86,6 @@ npm start
 ## Testes e qualidade
 
 O CI executa lint, migrations, testes de backend, cobertura, auditoria de dependências, type-check, testes frontend, build e smoke tests do stack completo.
-
-Comandos úteis:
 
 ```bash
 cd backend
@@ -136,13 +130,9 @@ O repositório usa somente dados sintéticos. Tokens, credenciais, circuitos, co
 
 ## Documentação
 
-A documentação técnica foi mantida curta e próxima do código:
-
 - [Arquitetura](docs/03-ARCHITECTURE.md)
-- [Modelo de domínio](docs/04-DOMAIN-MODEL.md)
 - [Modelo de dados](docs/05-DATA-MODEL.md)
 - [Contrato da API](docs/06-API-CONTRACT.md)
-- [UX e fluxos](docs/07-UX-FLOWS.md)
 - [Segurança](docs/08-SECURITY-PRIVACY.md)
 - [Testes](docs/09-TEST-STRATEGY.md)
 - [Deploy](docs/deployment/README.md)

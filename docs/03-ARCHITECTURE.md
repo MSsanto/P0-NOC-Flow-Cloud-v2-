@@ -233,7 +233,7 @@ Azure Database for PostgreSQL
           └── Application Insights / Log Analytics
 ```
 
-A API deve permanecer stateless para permitir escala horizontal. Sessão e autorização não podem depender de memória local do container. A escolha final dos SKUs e IaC pertence à execução DevOps, respeitando `docs/10-DEVOPS-AZURE.md`.
+A API deve permanecer stateless para permitir escala horizontal. Sessão e autorização não podem depender de memória local do container. A escolha de SKUs e IaC será feita quando o deploy Azure for implementado.
 
 ## Observabilidade
 
