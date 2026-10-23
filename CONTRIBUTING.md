@@ -1,21 +1,15 @@
 # Contribuindo
 
-## Estado atual
+O fluxo do projeto é simples:
 
-O projeto está em P0 documental. Mudanças de implementação não devem ser abertas antes da aprovação do P0.
+1. crie uma branch curta;
+2. faça uma mudança focada;
+3. adicione ou ajuste testes quando necessário;
+4. rode lint, testes e build;
+5. abra um pull request;
+6. faça squash merge depois do CI verde.
 
-## Fluxo futuro
-
-1. abrir/associar issue;
-2. criar branch curta;
-3. implementar uma mudança focada;
-4. adicionar/ajustar testes;
-5. atualizar documentação;
-6. abrir PR usando o template;
-7. aguardar CI/revisão;
-8. preferir squash merge para histórico de features, salvo decisão posterior.
-
-## Convenção de branches sugerida
+Convenções de branch usadas no repositório:
 
 - `feat/...`
 - `fix/...`
@@ -24,22 +18,6 @@ O projeto está em P0 documental. Mudanças de implementação não devem ser ab
 - `test/...`
 - `chore/...`
 
-## Commits
+Commits seguem Conventional Commits quando isso deixa o histórico mais claro.
 
-Preferência planejada por Conventional Commits:
-
-- `feat:`
-- `fix:`
-- `docs:`
-- `test:`
-- `refactor:`
-- `chore:`
-
-## Regras públicas
-
-- nunca anexar export real;
-- nunca colar token/log sensível em issue;
-- screenshots devem ser revisados;
-- novas dependências precisam de justificativa;
-- decisão arquitetural significativa exige ADR;
-- PR deve permanecer pequeno o suficiente para revisão efetiva.
+Nunca versione credenciais, tokens, dados corporativos reais ou exports de produção.

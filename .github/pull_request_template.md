@@ -1,29 +1,15 @@
-## Problema
+## O que mudou
 
-Descreva o problema/requisito que este PR resolve.
+Descreva a alteração e o motivo.
 
-## Solução
+## Como validar
 
-Descreva a mudança e seus limites.
+Liste os passos ou testes relevantes.
 
-## Evidências
+## Checklist
 
-- [ ] testes adicionados/atualizados
-- [ ] lint/type-check/build passam
-- [ ] screenshots usam somente dados sintéticos
-- [ ] documentação atualizada
-- [ ] ADR criado/atualizado se necessário
-
-## Segurança
-
-- [ ] autorização/tenant scoping revisados quando aplicável
-- [ ] nenhum secret ou dado real incluído
-- [ ] logs não expõem informação sensível
-
-## Teste manual
-
-Liste passos objetivos para validar.
-
-## Checklist P0
-
-- [ ] este PR não adiciona código de aplicação enquanto o P0 estiver bloqueado
+- [ ] lint/type-check passam
+- [ ] testes passam
+- [ ] build passa
+- [ ] nenhuma credencial ou dado real foi incluído
+- [ ] documentação foi atualizada quando necessário
