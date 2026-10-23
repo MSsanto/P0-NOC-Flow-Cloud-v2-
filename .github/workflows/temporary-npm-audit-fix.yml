@@ -32,10 +32,10 @@ jobs:
       - name: Upgrade npm
         run: npm install --global npm@11
 
-      - name: Upgrade Angular security patch line
+      - name: Align Angular security patch line
         run: |
-          npm install --save-exact             @angular/common@22.2.3             @angular/core@22.2.3             @angular/forms@22.2.3             @angular/platform-browser@22.2.3             @angular/router@22.2.3
-          npm install --save-dev --save-exact             @angular/build@22.2.3             @angular/cli@22.2.3             @angular/compiler-cli@22.2.3
+          npm pkg set             "dependencies.@angular/common=22.2.3"             "dependencies.@angular/core=22.2.3"             "dependencies.@angular/forms=22.2.3"             "dependencies.@angular/platform-browser=22.2.3"             "dependencies.@angular/router=22.2.3"             "devDependencies.@angular/build=22.2.3"             "devDependencies.@angular/cli=22.2.3"             "devDependencies.@angular/compiler-cli=22.2.3"
+          npm install
 
       - name: Refresh compatible transitive patches
         run: npm audit fix --package-lock-only || true
