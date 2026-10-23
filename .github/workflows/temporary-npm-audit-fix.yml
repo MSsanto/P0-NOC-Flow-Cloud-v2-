@@ -32,22 +32,30 @@ jobs:
       - name: Upgrade npm
         run: npm install --global npm@11
 
-      - name: Refresh compatible security patches
-        run: npm audit fix --package-lock-only
+      - name: Upgrade Angular security patch line
+        run: |
+          npm install --save-exact             @angular/common@22.2.3             @angular/core@22.2.3             @angular/forms@22.2.3             @angular/platform-browser@22.2.3             @angular/router@22.2.3
+          npm install --save-dev --save-exact             @angular/build@22.2.3             @angular/cli@22.2.3             @angular/compiler-cli@22.2.3
 
-      - name: Verify install and audit gate
+      - name: Refresh compatible transitive patches
+        run: npm audit fix --package-lock-only || true
+
+      - name: Verify frontend and audit gate
         run: |
           npm ci
+          npm run lint
+          npm test
+          npm run build
           npm audit --audit-level=high
 
-      - name: Commit remediated lockfile
+      - name: Commit remediated dependencies
         run: |
-          if git diff --quiet -- package-lock.json; then
-            echo "No lockfile change required."
+          if git diff --quiet -- package.json package-lock.json; then
+            echo "No dependency change required."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "chore: refresh frontend security patches"
+          git add package.json package-lock.json
+          git commit -m "chore: update Angular security patch line"
           git push origin HEAD:feat/nocflow-brand-identity
