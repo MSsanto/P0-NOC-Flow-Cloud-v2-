@@ -1,4 +1,4 @@
-# ADR-0009 — Auditoria persistida e observabilidade provider-neutral
+# ADR-0010 — Auditoria persistida e observabilidade provider-neutral
 
 **Status:** Accepted  
 **Data:** 2026-09-21
