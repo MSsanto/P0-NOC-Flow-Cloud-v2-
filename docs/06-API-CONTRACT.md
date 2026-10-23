@@ -204,7 +204,6 @@ A candidata `v0.3.0-beta` permanece destinada a ambiente local e demo privada pr
 
 ## Contrato detalhado do incremento
 
-Exemplos adicionais e parâmetros da Sprint 2: [`api/SPRINT_02-INCIDENTS.md`](api/SPRINT_02-INCIDENTS.md).
 
 
 ## Dashboard e handover — implementados na Sprint 4
