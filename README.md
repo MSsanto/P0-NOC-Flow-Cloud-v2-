@@ -1,5 +1,9 @@
 # P0 — NOC Flow Cloud v2
 
+<p align="center">
+  <img src="apps/web/public/brand/nocflow-brand.jpg" alt="nocflow" width="280" />
+</p>
+
 [![CI](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/actions/workflows/ci.yml/badge.svg)](https://github.com/MSsanto/P0-NOC-Flow-Cloud-v2-/actions/workflows/ci.yml)
 
 > Plataforma web de portfólio para o ciclo operacional de incidentes em NOC, construída com Angular, FastAPI, PostgreSQL, Docker e GitHub Actions.
